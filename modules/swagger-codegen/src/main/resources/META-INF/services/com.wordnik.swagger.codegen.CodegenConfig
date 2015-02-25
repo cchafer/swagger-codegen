@@ -12,3 +12,4 @@ com.wordnik.swagger.codegen.languages.SwaggerGenerator
 com.wordnik.swagger.codegen.languages.TizenClientCodegen
 com.wordnik.swagger.codegen.languages.PhpClientCodegen
 com.wordnik.swagger.codegen.languages.PythonClientCodegen
+com.wordnik.swagger.codegen.languages.AkkaScalaClientCodegen
