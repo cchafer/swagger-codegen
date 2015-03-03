@@ -1,0 +1,258 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "Account/Auth/Account",
+    "version": "1"
+  },
+  "host": "haapi.ankama.dev",
+  "basePath": "/Api/Account/Auth/Account/v1",
+  "schemes": ["https"],
+  "consumes": ["application/json"],
+  "produces": ["application/json"],
+  "paths": {
+    "/SignOn": {
+      "post": {
+        "description": "Logged an Ankama Account an return a api token",
+        "operationId": "SignOn",
+        "tags": ["Account/Auth/Account"],
+        "responses": {
+          "default": {
+            "description": "unexpected exception",
+            "schema": {"$ref": "#/definitions/Exception"},
+            "headers": {
+              "x-duration": {
+                "description": "Api Duration",
+                "type": "number"
+              }
+            }
+          },
+          "202": {
+            "description": "login succeeded",
+            "schema": {"$ref": "#/definitions/AnkamaToken"},
+            "headers": {
+              "x-duration": {
+                "description": "Api Duration",
+                "type": "number"
+              }
+            }
+          },
+          "200": {
+            "description": "login failed",
+            "schema": {"$ref": "#/definitions/AnkamaAuthLoginError"},
+            "headers": {
+              "x-duration": {
+                "description": "Api Duration",
+                "type": "number"
+              }
+            }
+          }
+        },
+        "consumes": ["application/x-www-form-urlencoded"],
+        "parameters": [
+          {
+            "name": "login",
+            "in": "formData",
+            "description": "login",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "password",
+            "in": "formData",
+            "description": "clear password",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "long_life_token",
+            "in": "formData",
+            "description": "days token or hour token",
+            "type": "boolean",
+            "required": false
+          },
+          {
+            "name": "meta",
+            "in": "formData",
+            "description": "meta data to add to token",
+            "type": "array",
+            "required": false,
+            "items": {"type": "string"}
+          }
+        ]
+      }
+    },
+    "/SignonQuery": {
+      "post": {
+        "description": "Logged an Ankama Account an return a api token",
+        "operationId": "SignOnQuery",
+        "tags": ["Account/Auth/Account"],
+        "responses": {
+          "default": {
+            "description": "unexpected exception",
+            "schema": {"$ref": "#/definitions/Exception"},
+            "headers": {
+              "x-duration": {
+                "description": "Api Duration",
+                "type": "number"
+              }
+            }
+          },
+          "200": {
+            "description": "login succeeded",
+            "schema": {"$ref": "#/definitions/AnkamaToken"},
+            "headers": {
+              "x-duration": {
+                "description": "Api Duration",
+                "type": "number"
+              }
+            }
+          },
+          "202": {
+            "description": "login failed",
+            "schema": {"$ref": "#/definitions/AnkamaAuthLoginError"},
+            "headers": {
+              "x-duration": {
+                "description": "Api Duration",
+                "type": "number"
+              }
+            }
+          }
+        },
+        "consumes": ["application/x-www-form-urlencoded"],
+        "parameters": [
+          {
+            "name": "login",
+            "in": "query",
+            "description": "login",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "password",
+            "in": "query",
+            "description": "clear password",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "long_life_token",
+            "in": "query",
+            "description": "days token or hour token",
+            "type": "boolean",
+            "required": false
+          },
+          {
+            "name": "meta",
+            "in": "query",
+            "description": "meta data to add to token",
+            "type": "array",
+            "required": false,
+            "items": {"type": "string"}
+          }
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "AnkamaAccount": {
+      "required": [
+        "id",
+        "type",
+        "login",
+        "nickname",
+        "security",
+        "lang",
+        "community",
+        "added_date",
+        "added_ip",
+        "login_date",
+        "login_ip"
+      ],
+      "properties": {
+        "id": {"type": "integer"},
+        "type": {"type": "string"},
+        "login": {"type": "string"},
+        "nickname": {"type": "string"},
+        "security": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Security enabled on this account\n- SHIELD : Ankama Shield activated\n- AUTHENTICATOR : Ankama Authenticator activated"
+        },
+        "lang": {"type": "string"},
+        "community": {
+          "type": "integer",
+          "description": "Account Community\n- FR : 0\n- UK : 1\n- INT : 2\n- DE : 3\n- ES : 4\n- RU : 5\n- PT : 6\n- NL : 7\n- JP : 8\n- IT : 9\n- PH : 10\n- NA : 1\n- CN : 12;\n- ASIA : 13\n- TW : 14"
+        },
+        "added_date": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "added_ip": {"type": "string"},
+        "login_date": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "login_ip": {"type": "string"}
+      }
+    },
+    "AnkamaToken": {
+      "required": [
+        "id",
+        "token",
+        "account_id",
+        "ip",
+        "added_date",
+        "meta",
+        "expiration_date",
+        "account"
+      ],
+      "properties": {
+        "id": {"type": "string"},
+        "token": {"type": "string"},
+        "account_id": {"type": "integer"},
+        "ip": {"type": "string"},
+        "added_date": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "meta": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "expiration_date": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "account": {
+          "type": "object",
+          "$ref": "#/definitions/AnkamaAccount"
+        }
+      }
+    },
+    "AnkamaAuthLoginError": {
+      "required": ["reason"],
+      "properties": {
+        "reason": {
+          "type": "string",
+          "description": "The reason for login failed\n- BAN : The account is ban\n- BLACKLIST : The Ip used is blacklist\n- LOCKED : The account is locked\n- DELETED : The account is deleted\n- RESETANKAMA : The account need a reset on account management\n- OTPTIMEFAILED : The account need to be unlock by Ankama Authenticator\n- SECURITYCARD : The account need a security card\n- BRUTEFORCE : The ip used is blacklist due to bruteforce\n- FAILED : The login / password is invalid\n- PARTNER : The account is not allowed due to Partner limitation\n- MAILNOVALID : The mail is invalid and need to be validated on account management\n- BETACLOSED : The account is not allowed on this beta close"
+        }
+      }
+    },
+    "Exception": {
+      "required": [
+        "status",
+        "message"
+      ],
+      "properties": {
+        "status": {"type": "integer"},
+        "message": {"type": "integer"},
+        "type": {"type": "string"},
+        "stack_trace": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "code": {"type": "integer"}
+      }
+    }
+  }
+}

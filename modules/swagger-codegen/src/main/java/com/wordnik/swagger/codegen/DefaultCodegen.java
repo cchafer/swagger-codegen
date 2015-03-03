@@ -319,7 +319,12 @@ public class DefaultCodegen {
   }
 
   public String initialCaps(String name) {
-    return Character.toUpperCase(name.charAt(0)) + name.substring(1);
+    try {
+      return Character.toUpperCase(name.charAt(0)) + name.substring(1);
+    } catch (Exception e) {
+      e.printStackTrace();
+      return "";
+    }
   }
 
   public String getTypeDeclaration(String name) {
@@ -623,10 +628,15 @@ public class DefaultCodegen {
       Response methodResponse = findMethodResponse(operation.getResponses());
       CodegenResponse methodCodegenResponse = null;
 
+
+      op.hasWildcardResponse = false;
+
       for (Map.Entry<String, Response> entry : operation.getResponses().entrySet()) {
         Response response = entry.getValue();
         CodegenResponse r = fromResponse(entry.getKey(), response);
         r.hasMore = true;
+        if ("0".equals(r.code))
+          op.hasWildcardResponse = true;
         if (response == methodResponse)
           methodCodegenResponse = r;
         op.responses.add(r);
@@ -641,6 +651,7 @@ public class DefaultCodegen {
         op.returnContainer = methodCodegenResponse.containerType;
         op.isListContainer = methodCodegenResponse.isListContainer;
         op.isMapContainer = methodCodegenResponse.isMapContainer;
+
         if (methodResponse.getSchema() != null) {
           Property responseProperty = methodResponse.getSchema();
           responseProperty.setRequired(true);

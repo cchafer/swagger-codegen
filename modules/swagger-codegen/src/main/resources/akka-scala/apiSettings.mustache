@@ -1,0 +1,24 @@
+package {{invokerPackage}}
+
+import java.util.concurrent.TimeUnit
+
+import akka.actor.{ExtendedActorSystem, Extension, ExtensionKey}
+import com.typesafe.config.Config
+import spray.http.HttpHeaders.RawHeader
+
+import scala.collection.JavaConversions._
+import scala.concurrent.duration.FiniteDuration
+
+class ApiSettings(config: Config) extends Extension {
+  def this(system: ExtendedActorSystem) = this(system.settings.config)
+
+  private def cfg = config.getConfig("{{apiKeyPath}}.{{apiKey}}")
+
+  val alwaysTrustCertificates = cfg.getBoolean("trust-certificates")
+  val defaultHeaders = cfg.getConfig("default-headers").entrySet.toList.map (c => RawHeader(c.getKey, c.getValue.render))
+  val connectionTimeout = FiniteDuration(cfg.getDuration("connection-timeout", TimeUnit.MILLISECONDS), TimeUnit.MILLISECONDS)
+  val compressionEnabled = cfg.getBoolean("compression.enabled")
+  val compressionSizeThreshold = cfg.getBytes("compression.size-threshold").toInt
+}
+
+object ApiSettings extends ExtensionKey[ApiSettings]

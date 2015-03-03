@@ -1,0 +1,20 @@
+{{configKeyPath}} {
+
+    {{configKey}} {
+
+        compression {
+            enabled: false
+            size-threshold: 0
+        }
+
+        trust-certificates: true
+
+        connection-timeout: 5s
+
+        default-headers {
+            "userAgent": "{{artifactId}}"
+        }
+    }
+}
+
+spray.can.host-connector.max-redirects = 10

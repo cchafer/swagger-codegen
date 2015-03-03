@@ -16,11 +16,17 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class AkkaScalaClientCodegen extends DefaultCodegen implements CodegenConfig {
-  protected String invokerPackage = "io.swagger.client";
+
+  protected String mainPackage = "io.swagger.client";
+
+  protected String invokerPackage = mainPackage + ".core";
   protected String groupId = "com.wordnik";
   protected String artifactId = "swagger-client";
   protected String artifactVersion = "1.0.0";
   protected String sourceFolder = "src/main/scala";
+  protected String resourcesFolder = "src/main/resources";
+  protected String configKey = "apiRequest";
+  protected String configKeyPath = mainPackage;
   protected String authScheme = "";
   protected boolean authPreemptive = false;
   protected boolean asyncHttpClient = !authScheme.isEmpty();
@@ -43,8 +49,8 @@ public class AkkaScalaClientCodegen extends DefaultCodegen implements CodegenCon
     modelTemplateFiles.put("model.mustache", ".scala");
     apiTemplateFiles.put("api.mustache", ".scala");
     templateDir = "akka-scala";
-    apiPackage = "io.swagger.client.api";
-    modelPackage = "io.swagger.client.model";
+    apiPackage = mainPackage + ".api";
+    modelPackage = mainPackage + ".model";
 
     reservedWords = new HashSet<String>(
         Arrays.asList(
@@ -62,10 +68,17 @@ public class AkkaScalaClientCodegen extends DefaultCodegen implements CodegenCon
     additionalProperties.put("asyncHttpClient", asyncHttpClient);
     additionalProperties.put("authScheme", authScheme);
     additionalProperties.put("authPreemptive", authPreemptive);
+    additionalProperties.put("configKey", configKey);
+    additionalProperties.put("configKeyPath", configKeyPath);
 
     supportingFiles.add(new SupportingFile("pom.mustache", "", "pom.xml"));
+    supportingFiles.add(new SupportingFile("reference.mustache", resourcesFolder, "reference.conf"));
+    supportingFiles.add(new SupportingFile("apiRequest.mustache",
+        (sourceFolder + File.separator + invokerPackage).replace(".", java.io.File.separator), "ApiRequest.scala"));
     supportingFiles.add(new SupportingFile("apiInvoker.mustache",
         (sourceFolder + File.separator + invokerPackage).replace(".", java.io.File.separator), "ApiInvoker.scala"));
+    supportingFiles.add(new SupportingFile("apiSettings.mustache",
+        (sourceFolder + File.separator + invokerPackage).replace(".", java.io.File.separator), "ApiSettings.scala"));
 
     importMapping.remove("List");
     importMapping.remove("Set");
