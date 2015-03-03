@@ -546,6 +546,7 @@ public class DefaultCodegen {
   }
 
   private Response findMethodResponse(Map<String, Response> responses) {
+
     String code = null;
     for(String responseCode : responses.keySet()) {
       if (responseCode.startsWith("2") || responseCode.equals("default")) {
@@ -637,6 +638,10 @@ public class DefaultCodegen {
         r.hasMore = true;
         if ("0".equals(r.code))
           op.hasWildcardResponse = true;
+        if(r.baseType != null &&
+            !defaultIncludes.contains(r.baseType) &&
+            !languageSpecificPrimitives.contains(r.baseType))
+          imports.add(r.baseType);
         if (response == methodResponse)
           methodCodegenResponse = r;
         op.responses.add(r);
@@ -663,11 +668,6 @@ public class DefaultCodegen {
 
       }
     }
-
-    if(op.returnBaseType != null &&
-      !defaultIncludes.contains(op.returnBaseType) &&
-      !languageSpecificPrimitives.contains(op.returnBaseType))
-      imports.add(op.returnBaseType);
 
     List<Parameter> parameters = operation.getParameters();
     CodegenParameter bodyParam = null;
