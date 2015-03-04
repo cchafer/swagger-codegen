@@ -40,7 +40,7 @@ object {{classname}} extends JsonUnmarshalling {
         {{/isWildcard}}{{/responses}}
         {{^hasWildcardResponse}}
           case response@HttpResponse(code, entity, headers, _) =>
-            throw new RuntimeException("Answer not understood : " + code + " " + entity.Totring)
+            throw new RuntimeException("Answer not understood : " + code + " " + entity.toString)
         {{/hasWildcardResponse}}
       }
     )

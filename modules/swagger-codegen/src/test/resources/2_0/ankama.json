@@ -1,107 +1,1586 @@
 {
   "swagger": "2.0",
   "info": {
-    "title": "Account/Auth/Account",
+    "title": "Ankama",
     "version": "1"
   },
-  "host": "haapi.ankama.dev",
-  "basePath": "/Api/Account/Auth/Account/v1",
+  "host": "haapi.ankama.lan",
+  "basePath": "\/json\/Ankama\/v1",
   "schemes": ["https"],
-  "consumes": ["application/json"],
-  "produces": ["application/json"],
+  "consumes": ["application\/json"],
+  "produces": ["application\/json"],
   "paths": {
-    "/SignOn": {
-      "post": {
-        "description": "Logged an Ankama Account an return a api token",
-        "operationId": "SignOn",
-        "tags": ["Account/Auth/Account"],
+    "\/Account\/Account": {
+      "get": {
+        "description": "Return current account",
+        "operationId": "Account",
         "responses": {
-          "default": {
-            "description": "unexpected exception",
-            "schema": {"$ref": "#/definitions/Exception"},
-            "headers": {
-              "x-duration": {
-                "description": "Api Duration",
-                "type": "number"
-              }
-            }
-          },
-          "202": {
-            "description": "login succeeded",
-            "schema": {"$ref": "#/definitions/AnkamaToken"},
-            "headers": {
-              "x-duration": {
-                "description": "Api Duration",
-                "type": "number"
-              }
-            }
-          },
           "200": {
-            "description": "login failed",
-            "schema": {"$ref": "#/definitions/AnkamaAuthLoginError"},
+            "description": "",
+            "schema": {"$ref": "#\/definitions\/Account"},
             "headers": {
-              "x-duration": {
+              "X-Duration": {
                 "description": "Api Duration",
                 "type": "number"
               }
             }
           }
         },
-        "consumes": ["application/x-www-form-urlencoded"],
-        "parameters": [
-          {
-            "name": "login",
-            "in": "formData",
-            "description": "login",
-            "type": "string",
-            "required": true
-          },
-          {
-            "name": "password",
-            "in": "formData",
-            "description": "clear password",
-            "type": "string",
-            "required": true
-          },
-          {
-            "name": "long_life_token",
-            "in": "formData",
-            "description": "days token or hour token",
-            "type": "boolean",
-            "required": false
-          },
-          {
-            "name": "meta",
-            "in": "formData",
-            "description": "meta data to add to token",
-            "type": "array",
-            "required": false,
-            "items": {"type": "string"}
-          }
-        ]
+        "security": [{"AuthAnkamaApiKey": []}],
+        "tags": ["Account"]
       }
     },
-    "/SignonQuery": {
-      "post": {
-        "description": "Logged an Ankama Account an return a api token",
-        "operationId": "SignOnQuery",
-        "tags": ["Account/Auth/Account"],
+    "\/Account\/Avatar": {
+      "get": {
+        "description": "Get Avatar for current game",
+        "operationId": "Avatar",
+        "parameters": [
+          {
+            "name": "game",
+            "in": "query",
+            "description": "gameId",
+            "type": "integer",
+            "required": false
+          }
+        ],
         "responses": {
-          "default": {
-            "description": "unexpected exception",
-            "schema": {"$ref": "#/definitions/Exception"},
+          "200": {
+            "description": "",
+            "schema": {"$ref": "#\/definitions\/Avatar"},
             "headers": {
-              "x-duration": {
+              "X-Duration": {
+                "description": "Api Duration",
+                "type": "number"
+              }
+            }
+          }
+        },
+        "security": [{"AuthAnkamaApiKey": []}],
+        "tags": ["Account"]
+      }
+    },
+    "\/Account\/CreateGuest": {
+      "get": {
+        "description": "Create an Ankama Guest Account",
+        "operationId": "CreateGuest",
+        "parameters": [
+          {
+            "name": "game",
+            "in": "query",
+            "description": "gameId",
+            "type": "integer",
+            "required": true
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "description": "language for error display",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "web_params",
+            "in": "query",
+            "description": "",
+            "type": "object",
+            "required": false,
+            "additionalProperties": {"type": "string"}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {"$ref": "#\/definitions\/Account"},
+            "headers": {
+              "X-Duration": {
+                "description": "Api Duration",
+                "type": "number"
+              },
+              "X-Password": {
+                "description": "The generated password for this guest account",
+                "type": "string"
+              }
+            }
+          },
+          "601": {
+            "description": "login failed",
+            "schema": {"$ref": "#\/definitions\/ErrorAccountLogin"},
+            "headers": {
+              "X-Duration": {
                 "description": "Api Duration",
                 "type": "number"
               }
             }
           },
+          "500": {
+            "description": "Unable to create ankama account",
+            "schema": {"$ref": "#\/definitions\/HaapiException"}
+          }
+        },
+        "tags": ["Account"]
+      }
+    },
+    "\/Account\/CreateToken": {
+      "get": {
+        "description": "Create a token for an Ankama Account",
+        "operationId": "CreateToken",
+        "parameters": [
+          {
+            "name": "game",
+            "in": "query",
+            "description": "gameId",
+            "type": "integer",
+            "required": true
+          },
+          {
+            "name": "data",
+            "in": "query",
+            "description": "data to pass to game",
+            "type": "object",
+            "required": false,
+            "additionalProperties": {"type": "string"}
+          }
+        ],
+        "responses": {
           "200": {
             "description": "login succeeded",
-            "schema": {"$ref": "#/definitions/AnkamaToken"},
+            "schema": {"$ref": "#\/definitions\/Token"},
             "headers": {
-              "x-duration": {
+              "X-Duration": {
+                "description": "Api Duration",
+                "type": "number"
+              }
+            }
+          }
+        },
+        "security": [{"AuthAnkamaApiKey": []}],
+        "tags": ["Account"]
+      }
+    },
+    "\/Account\/CreateTokenWithPassword": {
+      "post": {
+        "consumes": ["application\/x-www-form-urlencoded"],
+        "description": "SignOn an Ankama Account with login & password",
+        "operationId": "CreateTokenWithPassword",
+        "parameters": [
+          {
+            "name": "login",
+            "in": "formData",
+            "description": "login",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "password",
+            "in": "formData",
+            "description": "clear password",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "game",
+            "in": "formData",
+            "description": "gameId",
+            "type": "integer",
+            "required": true
+          },
+          {
+            "name": "data",
+            "in": "formData",
+            "description": "data to pass to game",
+            "type": "object",
+            "required": false,
+            "additionalProperties": {"type": "string"}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "login succeeded",
+            "schema": {"$ref": "#\/definitions\/Token"},
+            "headers": {
+              "X-Duration": {
+                "description": "Api Duration",
+                "type": "number"
+              }
+            }
+          },
+          "601": {
+            "description": "login failed",
+            "schema": {"$ref": "#\/definitions\/ErrorAccountLogin"},
+            "headers": {
+              "X-Duration": {
+                "description": "Api Duration",
+                "type": "number"
+              }
+            }
+          }
+        },
+        "tags": ["Account"]
+      }
+    },
+    "\/Account\/SignOnWithPassword": {
+      "post": {
+        "consumes": ["application\/x-www-form-urlencoded"],
+        "description": "SignOn an Ankama Account with login & password\n\nConnection from game server",
+        "operationId": "SignOnWithPassword",
+        "parameters": [
+          {
+            "name": "login",
+            "in": "formData",
+            "description": "login",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "password",
+            "in": "formData",
+            "description": "clear password",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "ip",
+            "in": "formData",
+            "description": "ip",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "game",
+            "in": "formData",
+            "description": "gameId",
+            "type": "integer",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "login succeeded",
+            "schema": {"$ref": "#\/definitions\/AccountSession"},
+            "headers": {
+              "X-Duration": {
+                "description": "Api Duration",
+                "type": "number"
+              }
+            }
+          },
+          "601": {
+            "description": "login failed",
+            "schema": {"$ref": "#\/definitions\/ErrorAccountLogin"},
+            "headers": {
+              "X-Duration": {
+                "description": "Api Duration",
+                "type": "number"
+              }
+            }
+          }
+        },
+        "security": [{"AuthPassword": []}],
+        "tags": ["Account"]
+      }
+    },
+    "\/Account\/SignOnWithToken": {
+      "post": {
+        "consumes": ["application\/x-www-form-urlencoded"],
+        "description": "Signon an Ankama Account with token",
+        "operationId": "SignOnWithToken",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "formData",
+            "description": "unique usage token create with method CreateToken",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "ip",
+            "in": "formData",
+            "description": "ip",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "game",
+            "in": "formData",
+            "description": "gameId",
+            "type": "integer",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "login succeeded",
+            "schema": {"$ref": "#\/definitions\/AccountSession"},
+            "headers": {
+              "X-Duration": {
+                "description": "Api Duration",
+                "type": "number"
+              }
+            }
+          },
+          "601": {
+            "description": "login failed",
+            "schema": {"$ref": "#\/definitions\/ErrorAccountLogin"},
+            "headers": {
+              "X-Duration": {
+                "description": "Api Duration",
+                "type": "number"
+              }
+            }
+          }
+        },
+        "security": [{"AuthPassword": []}],
+        "tags": ["Account"]
+      }
+    },
+    "\/Api\/CreateApiKey": {
+      "post": {
+        "consumes": ["application\/x-www-form-urlencoded"],
+        "description": "Create an apikey from login & password",
+        "operationId": "CreateApiKey",
+        "parameters": [
+          {
+            "name": "login",
+            "in": "formData",
+            "description": "login",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "password",
+            "in": "formData",
+            "description": "clear password",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "long_life_token",
+            "in": "formData",
+            "description": "days token or hour token",
+            "type": "boolean",
+            "required": false
+          },
+          {
+            "name": "meta",
+            "in": "formData",
+            "description": "meta data to add to token",
+            "type": "array",
+            "required": false,
+            "items": {"type": "string"}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "login succeeded",
+            "schema": {"$ref": "#\/definitions\/ApiKey"},
+            "headers": {
+              "X-Duration": {
+                "description": "Api Duration",
+                "type": "number"
+              }
+            }
+          },
+          "601": {
+            "description": "login failed",
+            "schema": {"$ref": "#\/definitions\/ErrorAccountLogin"},
+            "headers": {
+              "X-Duration": {
+                "description": "Api Duration",
+                "type": "number"
+              }
+            }
+          }
+        },
+        "tags": ["Api"]
+      }
+    },
+    "\/Api\/CreateApiKeyFromServer": {
+      "post": {
+        "consumes": ["application\/x-www-form-urlencoded"],
+        "description": "Create an apikey for an account_id directly from server",
+        "operationId": "CreateApiKeyFromServer",
+        "parameters": [
+          {
+            "name": "account_id",
+            "in": "formData",
+            "description": "",
+            "type": "integer",
+            "required": true
+          },
+          {
+            "name": "ip",
+            "in": "formData",
+            "description": "",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "meta",
+            "in": "formData",
+            "description": "meta data to add to token",
+            "type": "array",
+            "required": false,
+            "items": {"type": "string"}
+          },
+          {
+            "name": "data",
+            "in": "formData",
+            "description": "Data stored with ApiKey",
+            "type": "object",
+            "required": false,
+            "additionalProperties": {"type": "string"}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "login succeeded",
+            "schema": {"$ref": "#\/definitions\/ApiKey"},
+            "headers": {
+              "X-Duration": {
+                "description": "Api Duration",
+                "type": "number"
+              }
+            }
+          }
+        },
+        "security": [{"AuthPassword": []}],
+        "tags": ["Api"]
+      }
+    },
+    "\/Api\/DeleteApiKey": {
+      "get": {
+        "description": "Delete an apikey for an Ankama Account",
+        "operationId": "DeleteApiKey",
+        "responses": {
+          "204": {
+            "description": "successful deleted",
+            "headers": {
+              "X-Duration": {
+                "description": "Api Duration",
+                "type": "number"
+              }
+            }
+          }
+        },
+        "security": [{"AuthAnkamaApiKey": []}],
+        "tags": ["Api"]
+      }
+    },
+    "\/Game\/AdminRight": {
+      "post": {
+        "consumes": ["application\/x-www-form-urlencoded"],
+        "description": "Return Admin right for a Account",
+        "operationId": "AdminRight",
+        "parameters": [
+          {
+            "name": "game",
+            "in": "formData",
+            "description": "gameId",
+            "type": "integer",
+            "required": true
+          },
+          {
+            "name": "account",
+            "in": "formData",
+            "description": "accountId",
+            "type": "integer",
+            "required": true
+          },
+          {
+            "name": "server",
+            "in": "formData",
+            "description": "serverId",
+            "type": "integer",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "code 200 response",
+            "schema": {"$ref": "#\/definitions\/GameAdminRightResponse"},
+            "headers": {
+              "X-Duration": {
+                "description": "Api Duration",
+                "type": "number"
+              }
+            }
+          }
+        },
+        "security": [{"AuthPassword": []}],
+        "tags": ["Game"]
+      }
+    },
+    "\/Game\/Events\/Category\/Delete": {
+      "get": {
+        "description": "Delete a category",
+        "operationId": "Delete",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "description": "",
+            "type": "integer",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "code 200 response",
+            "schema": {"$ref": "#\/definitions\/GameEventsCategoryDeleteResponse"},
+            "headers": {
+              "X-Duration": {
+                "description": "Api Duration",
+                "type": "number"
+              }
+            }
+          },
+          "604": {
+            "description": "Invalid category id",
+            "schema": {"$ref": "#\/definitions\/HaapiException"}
+          }
+        },
+        "security": [{"Auth": []}],
+        "tags": ["Game\/Events\/Category"]
+      }
+    },
+    "\/Game\/Events\/Category\/GetAll": {
+      "get": {
+        "description": "Get all categories",
+        "operationId": "GetAll",
+        "responses": {
+          "200": {
+            "description": "code 200 response",
+            "schema": {"$ref": "#\/definitions\/GameEventsCategoryGetAllResponse"},
+            "headers": {
+              "X-Duration": {
+                "description": "Api Duration",
+                "type": "number"
+              }
+            }
+          }
+        },
+        "security": [{"Auth": []}],
+        "tags": ["Game\/Events\/Category"]
+      }
+    },
+    "\/Game\/Events\/Category\/GetById": {
+      "get": {
+        "description": "Get a category by id",
+        "operationId": "GetById",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "description": "",
+            "type": "integer",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "code 200 response",
+            "schema": {"$ref": "#\/definitions\/GameEventsCategoryGetByIdResponse"},
+            "headers": {
+              "X-Duration": {
+                "description": "Api Duration",
+                "type": "number"
+              }
+            }
+          },
+          "604": {
+            "description": "Invalid category id",
+            "schema": {"$ref": "#\/definitions\/HaapiException"}
+          }
+        },
+        "security": [{"Auth": []}],
+        "tags": ["Game\/Events\/Category"]
+      }
+    },
+    "\/Game\/Events\/Category\/Insert": {
+      "post": {
+        "consumes": ["application\/x-www-form-urlencoded"],
+        "description": "Create a category",
+        "operationId": "Insert",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "formData",
+            "description": "",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "parent_id",
+            "in": "formData",
+            "description": "",
+            "type": "integer",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "code 200 response",
+            "schema": {"$ref": "#\/definitions\/GameEventsCategoryInsertResponse"},
+            "headers": {
+              "X-Duration": {
+                "description": "Api Duration",
+                "type": "number"
+              }
+            }
+          },
+          "422": {
+            "description": "Name already exists",
+            "schema": {"$ref": "#\/definitions\/HaapiException"}
+          }
+        },
+        "security": [{"Auth": []}],
+        "tags": ["Game\/Events\/Category"]
+      }
+    },
+    "\/Game\/Events\/Category\/Update": {
+      "post": {
+        "consumes": ["application\/x-www-form-urlencoded"],
+        "description": "Update a category",
+        "operationId": "Update",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "formData",
+            "description": "",
+            "type": "integer",
+            "required": true
+          },
+          {
+            "name": "name",
+            "in": "formData",
+            "description": "",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "parent_id",
+            "in": "formData",
+            "description": "",
+            "type": "integer",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "code 200 response",
+            "schema": {"$ref": "#\/definitions\/GameEventsCategoryUpdateResponse"},
+            "headers": {
+              "X-Duration": {
+                "description": "Api Duration",
+                "type": "number"
+              }
+            }
+          },
+          "604": {
+            "description": "Invalid category id",
+            "schema": {"$ref": "#\/definitions\/HaapiException"}
+          },
+          "422": {
+            "description": "Name already exists",
+            "schema": {"$ref": "#\/definitions\/HaapiException"}
+          }
+        },
+        "security": [{"Auth": []}],
+        "tags": ["Game\/Events\/Category"]
+      }
+    },
+    "\/Money\/KrozAmount": {
+      "get": {
+        "description": "Return global account for game and amount in kroz",
+        "operationId": "KrozAmount",
+        "parameters": [
+          {
+            "name": "account",
+            "in": "query",
+            "description": "accountId",
+            "type": "integer",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {"$ref": "#\/definitions\/MoneyBalance"},
+            "headers": {
+              "X-Duration": {
+                "description": "Api Duration",
+                "type": "number"
+              }
+            }
+          },
+          "604": {
+            "description": "Invalid account id",
+            "schema": {"$ref": "#\/definitions\/HaapiException"}
+          }
+        },
+        "security": [{"AuthPassword": []}],
+        "tags": ["Money"]
+      }
+    },
+    "\/Money\/KrozCredit": {
+      "get": {
+        "description": "Credit kroz on account for a game",
+        "operationId": "KrozCredit",
+        "parameters": [
+          {
+            "name": "account",
+            "in": "query",
+            "description": "accountId",
+            "type": "integer",
+            "required": true
+          },
+          {
+            "name": "amount",
+            "in": "query",
+            "description": "amount",
+            "type": "integer",
+            "required": true
+          },
+          {
+            "name": "game",
+            "in": "query",
+            "description": "gameId",
+            "type": "integer",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {"$ref": "#\/definitions\/MoneyBalance"},
+            "headers": {
+              "X-Duration": {
+                "description": "Api Duration",
+                "type": "number"
+              }
+            }
+          },
+          "604": {
+            "description": "Invalid account id",
+            "schema": {"$ref": "#\/definitions\/HaapiException"}
+          }
+        },
+        "security": [{"AuthPassword": []}],
+        "tags": ["Money"]
+      }
+    },
+    "\/Money\/OgrinsAmount": {
+      "get": {
+        "description": "Return global account for game and amount in ogrine",
+        "operationId": "OgrinsAmount",
+        "parameters": [
+          {
+            "name": "account",
+            "in": "query",
+            "description": "accountId",
+            "type": "integer",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {"$ref": "#\/definitions\/MoneyBalance"},
+            "headers": {
+              "X-Duration": {
+                "description": "Api Duration",
+                "type": "number"
+              }
+            }
+          },
+          "604": {
+            "description": "Invalid account id",
+            "schema": {"$ref": "#\/definitions\/HaapiException"}
+          }
+        },
+        "security": [{"AuthPassword": []}],
+        "tags": ["Money"]
+      }
+    },
+    "\/Shop\/ArticlesListByCategory": {
+      "get": {
+        "description": "Returns list of articles",
+        "operationId": "ArticlesListByCategory",
+        "parameters": [
+          {
+            "name": "shop_key",
+            "in": "query",
+            "description": "",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "description": "",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "category_id",
+            "in": "query",
+            "description": "",
+            "type": "integer",
+            "required": true
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "",
+            "type": "integer",
+            "required": false
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "description": "",
+            "type": "integer",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "type": "array",
+              "items": {"$ref": "#\/definitions\/ShopArticle"}
+            },
+            "headers": {
+              "X-Duration": {
+                "description": "Api Duration",
+                "type": "number"
+              },
+              "X-Total": {
+                "description": "",
+                "type": "integer"
+              }
+            }
+          }
+        },
+        "security": [{"AuthAnkamaApiKey": []}],
+        "tags": ["Shop"]
+      }
+    },
+    "\/Shop\/ArticlesListByCategoryKey": {
+      "get": {
+        "description": "Returns list of articles by a category key",
+        "operationId": "ArticlesListByCategoryKey",
+        "parameters": [
+          {
+            "name": "shop_key",
+            "in": "query",
+            "description": "",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "description": "",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "key",
+            "in": "query",
+            "description": "",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "",
+            "type": "integer",
+            "required": false
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "description": "",
+            "type": "integer",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "type": "array",
+              "items": {"$ref": "#\/definitions\/ShopArticle"}
+            },
+            "headers": {
+              "X-Duration": {
+                "description": "Api Duration",
+                "type": "number"
+              },
+              "X-Total": {
+                "description": "",
+                "type": "integer"
+              }
+            }
+          }
+        },
+        "security": [{"AuthAnkamaApiKey": []}],
+        "tags": ["Shop"]
+      }
+    },
+    "\/Shop\/ArticlesListByGondolahead": {
+      "get": {
+        "description": "Returns list of articles by a gondola head",
+        "operationId": "ArticlesListByGondolahead",
+        "parameters": [
+          {
+            "name": "shop_key",
+            "in": "query",
+            "description": "",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "description": "",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "gondolahead_id",
+            "in": "query",
+            "description": "",
+            "type": "integer",
+            "required": true
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "",
+            "type": "integer",
+            "required": false
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "description": "",
+            "type": "integer",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "type": "array",
+              "items": {"$ref": "#\/definitions\/ShopArticle"}
+            },
+            "headers": {
+              "X-Duration": {
+                "description": "Api Duration",
+                "type": "number"
+              },
+              "X-Total": {
+                "description": "",
+                "type": "integer"
+              }
+            }
+          }
+        },
+        "security": [{"AuthAnkamaApiKey": []}],
+        "tags": ["Shop"]
+      }
+    },
+    "\/Shop\/ArticlesListByIds": {
+      "get": {
+        "description": "Returns list of articles by id",
+        "operationId": "ArticlesListByIds",
+        "parameters": [
+          {
+            "name": "shop_key",
+            "in": "query",
+            "description": "",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "description": "",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "ids",
+            "in": "query",
+            "description": "",
+            "type": "array",
+            "required": true,
+            "items": {"type": "integer"}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "type": "array",
+              "items": {"$ref": "#\/definitions\/ShopArticle"}
+            },
+            "headers": {
+              "X-Duration": {
+                "description": "Api Duration",
+                "type": "number"
+              },
+              "X-Total": {
+                "description": "",
+                "type": "integer"
+              }
+            }
+          }
+        },
+        "security": [{"AuthAnkamaApiKey": []}],
+        "tags": ["Shop"]
+      }
+    },
+    "\/Shop\/ArticlesListByKey": {
+      "get": {
+        "description": "Returns list of articles by key",
+        "operationId": "ArticlesListByKey",
+        "parameters": [
+          {
+            "name": "shop_key",
+            "in": "query",
+            "description": "",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "description": "",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "key",
+            "in": "query",
+            "description": "",
+            "type": "array",
+            "required": true,
+            "items": {"type": "string"}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "type": "array",
+              "items": {"$ref": "#\/definitions\/ShopArticle"}
+            },
+            "headers": {
+              "X-Duration": {
+                "description": "Api Duration",
+                "type": "number"
+              },
+              "X-Total": {
+                "description": "",
+                "type": "integer"
+              }
+            }
+          }
+        },
+        "security": [{"AuthAnkamaApiKey": []}],
+        "tags": ["Shop"]
+      }
+    },
+    "\/Shop\/ArticlesListSearch": {
+      "get": {
+        "description": "Search for a list of articles",
+        "operationId": "ArticlesListSearch",
+        "parameters": [
+          {
+            "name": "shop_key",
+            "in": "query",
+            "description": "",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "description": "",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "text",
+            "in": "query",
+            "description": "",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "catogories_id",
+            "in": "query",
+            "description": "",
+            "type": "array",
+            "required": false,
+            "items": {"type": "integer"}
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "",
+            "type": "integer",
+            "required": false
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "description": "",
+            "type": "integer",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "type": "array",
+              "items": {"$ref": "#\/definitions\/ShopArticle"}
+            },
+            "headers": {
+              "X-Duration": {
+                "description": "Api Duration",
+                "type": "number"
+              },
+              "X-Total": {
+                "description": "",
+                "type": "integer"
+              }
+            }
+          }
+        },
+        "security": [{"AuthAnkamaApiKey": []}],
+        "tags": ["Shop"]
+      }
+    },
+    "\/Shop\/CategoriesList": {
+      "get": {
+        "description": "Returns list of categories",
+        "operationId": "CategoriesList",
+        "parameters": [
+          {
+            "name": "shop_key",
+            "in": "query",
+            "description": "",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "description": "",
+            "type": "string",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "type": "array",
+              "items": {"$ref": "#\/definitions\/ShopCategory"}
+            },
+            "headers": {
+              "X-Duration": {
+                "description": "Api Duration",
+                "type": "number"
+              }
+            }
+          }
+        },
+        "security": [{"AuthAnkamaApiKey": []}],
+        "tags": ["Shop"]
+      }
+    },
+    "\/Shop\/CategoriesListByKey": {
+      "get": {
+        "description": "Returns list of categories by key",
+        "operationId": "CategoriesListByKey",
+        "parameters": [
+          {
+            "name": "shop_key",
+            "in": "query",
+            "description": "",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "description": "",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "key",
+            "in": "query",
+            "description": "",
+            "type": "string",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "type": "array",
+              "items": {"$ref": "#\/definitions\/ShopCategory"}
+            },
+            "headers": {
+              "X-Duration": {
+                "description": "Api Duration",
+                "type": "number"
+              },
+              "X-Total": {
+                "description": "",
+                "type": "integer"
+              }
+            }
+          }
+        },
+        "security": [{"AuthAnkamaApiKey": []}],
+        "tags": ["Shop"]
+      }
+    },
+    "\/Shop\/GondolaHeadsList": {
+      "get": {
+        "description": "Returns list of gondola heads",
+        "operationId": "GondolaHeadsList",
+        "parameters": [
+          {
+            "name": "shop_key",
+            "in": "query",
+            "description": "",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "description": "",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "home",
+            "in": "query",
+            "description": "",
+            "type": "boolean",
+            "required": false
+          },
+          {
+            "name": "category_id",
+            "in": "query",
+            "description": "",
+            "type": "integer",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "type": "array",
+              "items": {"$ref": "#\/definitions\/ShopGondolaHead"}
+            },
+            "headers": {
+              "X-Duration": {
+                "description": "Api Duration",
+                "type": "number"
+              }
+            }
+          }
+        },
+        "security": [{"AuthAnkamaApiKey": []}],
+        "tags": ["Shop"]
+      }
+    },
+    "\/Shop\/HightLightsList": {
+      "get": {
+        "description": "Returns list of highlight",
+        "operationId": "HightLightsList",
+        "parameters": [
+          {
+            "name": "shop_key",
+            "in": "query",
+            "description": "",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "description": "",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "description": "type of highlight",
+            "type": "string",
+            "required": false
+          },
+          {
+            "name": "category_id",
+            "in": "query",
+            "description": "",
+            "type": "integer",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "type": "array",
+              "items": {"$ref": "#\/definitions\/ShopHighlight"}
+            },
+            "headers": {
+              "X-Duration": {
+                "description": "Api Duration",
+                "type": "number"
+              }
+            }
+          }
+        },
+        "security": [{"AuthAnkamaApiKey": []}],
+        "tags": ["Shop"]
+      }
+    },
+    "\/Shop\/Home": {
+      "get": {
+        "description": "Returns home elements",
+        "operationId": "Home",
+        "parameters": [
+          {
+            "name": "shop_key",
+            "in": "query",
+            "description": "",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "description": "",
+            "type": "string",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {"$ref": "#\/definitions\/ShopHome"},
+            "headers": {
+              "X-Duration": {
+                "description": "Api Duration",
+                "type": "number"
+              }
+            }
+          }
+        },
+        "security": [{"AuthAnkamaApiKey": []}],
+        "tags": ["Shop"]
+      }
+    },
+    "\/Shop\/PartnerFinalizeTransaction": {
+      "get": {
+        "description": "Finalize transaction of an order",
+        "operationId": "PartnerFinalizeTransaction",
+        "parameters": [
+          {
+            "name": "shop_key",
+            "in": "query",
+            "description": "",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "description": "",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "finalize",
+            "in": "query",
+            "description": "",
+            "type": "boolean",
+            "required": true
+          },
+          {
+            "name": "order_id",
+            "in": "query",
+            "description": "",
+            "type": "integer",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {"$ref": "#\/definitions\/ShopBuyResult"},
+            "headers": {
+              "X-Duration": {
+                "description": "Api Duration",
+                "type": "number"
+              }
+            }
+          },
+          "601": {
+            "description": "",
+            "schema": {"$ref": "#\/definitions\/ShopBuyError"},
+            "headers": {
+              "X-Duration": {
+                "description": "Api Duration",
+                "type": "number"
+              }
+            }
+          }
+        },
+        "security": [{"AuthAnkamaApiKey": []}],
+        "tags": ["Shop"]
+      }
+    },
+    "\/Shop\/QuickBuy": {
+      "get": {
+        "description": "Quick buy an article",
+        "operationId": "QuickBuy",
+        "parameters": [
+          {
+            "name": "shop_key",
+            "in": "query",
+            "description": "",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "description": "",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "article_id",
+            "in": "query",
+            "description": "",
+            "type": "integer",
+            "required": true
+          },
+          {
+            "name": "quantity",
+            "in": "query",
+            "description": "",
+            "type": "integer",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {"$ref": "#\/definitions\/ShopBuyResult"},
+            "headers": {
+              "X-Duration": {
+                "description": "Api Duration",
+                "type": "number"
+              }
+            }
+          },
+          "601": {
+            "description": "",
+            "schema": {"$ref": "#\/definitions\/ShopBuyError"},
+            "headers": {
+              "X-Duration": {
+                "description": "Api Duration",
+                "type": "number"
+              }
+            }
+          }
+        },
+        "security": [{"AuthAnkamaApiKey": []}],
+        "tags": ["Shop"]
+      }
+    },
+    "\/Steam\/GuestCreate": {
+      "post": {
+        "consumes": ["application\/x-www-form-urlencoded"],
+        "description": "Create a ghost Ankama Account",
+        "operationId": "GuestCreate",
+        "parameters": [
+          {
+            "name": "session_ticket",
+            "in": "formData",
+            "description": "",
+            "type": "string",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "login succeeded",
+            "schema": {"$ref": "#\/definitions\/Account"},
+            "headers": {
+              "X-Duration": {
+                "description": "Api Duration",
+                "type": "number"
+              }
+            }
+          }
+        },
+        "tags": ["Steam"]
+      }
+    },
+    "\/Steam\/Link": {
+      "": {
+        "description": "Try to link the Account Account with Steam",
+        "operationId": "Link",
+        "parameters": [
+          {
+            "name": "session_ticket",
+            "in": "query",
+            "description": "Steam session ticket",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "login",
+            "in": "query",
+            "description": "Ankama Login",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "password",
+            "in": "query",
+            "description": "Ankama Password",
+            "type": "string",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "login succeeded",
+            "schema": {"$ref": "#\/definitions\/Account"},
+            "headers": {
+              "X-Duration": {
                 "description": "Api Duration",
                 "type": "number"
               }
@@ -109,52 +1588,69 @@
           },
           "202": {
             "description": "login failed",
-            "schema": {"$ref": "#/definitions/AnkamaAuthLoginError"},
+            "schema": {"$ref": "#\/definitions\/ErrorAccountLogin"},
             "headers": {
-              "x-duration": {
+              "X-Duration": {
                 "description": "Api Duration",
                 "type": "number"
               }
             }
           }
         },
-        "consumes": ["application/x-www-form-urlencoded"],
+        "security": [{"Auth": []}],
+        "tags": ["Steam"]
+      }
+    },
+    "\/Steam\/Login": {
+      "post": {
+        "consumes": ["application\/x-www-form-urlencoded"],
+        "description": "Try to log the current user with Steam session ticket",
+        "operationId": "Login",
         "parameters": [
           {
-            "name": "login",
-            "in": "query",
-            "description": "login",
+            "name": "session_ticket",
+            "in": "formData",
+            "description": "Steam session ticket",
             "type": "string",
             "required": true
-          },
-          {
-            "name": "password",
-            "in": "query",
-            "description": "clear password",
-            "type": "string",
-            "required": true
-          },
-          {
-            "name": "long_life_token",
-            "in": "query",
-            "description": "days token or hour token",
-            "type": "boolean",
-            "required": false
-          },
-          {
-            "name": "meta",
-            "in": "query",
-            "description": "meta data to add to token",
-            "type": "array",
-            "required": false,
-            "items": {"type": "string"}
           }
-        ]
+        ],
+        "responses": {
+          "200": {
+            "description": "login succeeded",
+            "schema": {"$ref": "#\/definitions\/Account"},
+            "headers": {
+              "X-Duration": {
+                "description": "Api Duration",
+                "type": "number"
+              }
+            }
+          },
+          "202": {
+            "description": "login failed",
+            "schema": {"$ref": "#\/definitions\/ErrorAccountLogin"},
+            "headers": {
+              "X-Duration": {
+                "description": "Api Duration",
+                "type": "number"
+              }
+            }
+          }
+        },
+        "tags": ["Steam"]
       }
     }
   },
+  "securityDefinitions": {
+    "AuthAnkamaApiKey": {
+      "type": "apiKey",
+      "name": "APIKEY",
+      "in": "header"
+    },
+    "AuthPassword": {"type": "basic"}
+  },
   "definitions": {
-    "AnkamaAccount": {
+    "Account": {
       "required": [
         "id",
         "type",
@@ -195,20 +1691,48 @@
         "login_ip": {"type": "string"}
       }
     },
-    "AnkamaToken": {
+    "Avatar": {
+      "required": ["url"],
+      "properties": {"url": {"type": "string"}}
+    },
+    "ErrorAccountLogin": {
+      "required": ["reason"],
+      "properties": {
+        "reason": {
+          "type": "string",
+          "description": "The reason for login failed\n- BAN : The account is ban\n- BLACKLIST : The Ip used is blacklist\n- LOCKED : The account is locked\n- DELETED : The account is deleted\n- RESETANKAMA : The account need a reset on account management\n- OTPTIMEFAILED : The account need to be unlock by Ankama Authenticator\n- SECURITYCARD : The account need a security card\n- BRUTEFORCE : The ip used is blacklist due to bruteforce\n- FAILED : The login \/ password is invalid\n- PARTNER : The account is not allowed due to Partner limitation\n- MAILNOVALID : The mail is invalid and need to be validated on account management\n- BETACLOSED : The account is not allowed on this beta close"
+        }
+      }
+    },
+    "Token": {
+      "required": ["token"],
+      "properties": {"token": {"type": "string"}}
+    },
+    "AccountSession": {
       "required": [
         "id",
-        "token",
+        "account"
+      ],
+      "properties": {
+        "id": {"type": "integer"},
+        "account": {
+          "type": "object",
+          "$ref": "#\/definitions\/Account"
+        }
+      }
+    },
+    "ApiKey": {
+      "required": [
+        "key",
         "account_id",
         "ip",
         "added_date",
         "meta",
-        "expiration_date",
-        "account"
+        "data",
+        "expiration_date"
       ],
       "properties": {
-        "id": {"type": "string"},
-        "token": {"type": "string"},
+        "key": {"type": "string"},
         "account_id": {"type": "integer"},
         "ip": {"type": "string"},
         "added_date": {
@@ -219,26 +1743,521 @@
           "type": "array",
           "items": {"type": "string"}
         },
+        "data": {
+          "type": "object",
+          "additionalProperties": {"type": "string"}
+        },
         "expiration_date": {
           "type": "string",
           "format": "date-time"
-        },
-        "account": {
-          "type": "object",
-          "$ref": "#/definitions/AnkamaAccount"
         }
       }
     },
-    "AnkamaAuthLoginError": {
+    "GameAdminRightResponse": {
+      "required": ["rights"],
+      "properties": {
+        "rights": {
+          "type": "array",
+          "items": {"type": "integer"},
+          "description": "If server is not null, a simple array or a 2 dimensions arrays with server as key, array of right as value @TODO"
+        }
+      }
+    },
+    "GameEventsCategoryDeleteResponse": {
+      "required": ["success"],
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "description": "no description"
+        }
+      }
+    },
+    "GameEventsCategoryGetAllResponse": {
+      "required": ["categories"],
+      "properties": {
+        "categories": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#\/definitions\/GameEventsCategory"
+          },
+          "description": "no description"
+        }
+      }
+    },
+    "GameEventsCategory": {
+      "required": [
+        "id",
+        "parent_id",
+        "name"
+      ],
+      "properties": {
+        "id": {
+          "type": "integer",
+          "description": "Auto increment"
+        },
+        "parent_id": {"type": "string"},
+        "name": {"type": "string"}
+      }
+    },
+    "GameEventsCategoryGetByIdResponse": {
+      "required": ["category"],
+      "properties": {
+        "category": {
+          "type": "object",
+          "$ref": "#\/definitions\/AnkamaModelsGameEventsCategory",
+          "description": "no description"
+        }
+      }
+    },
+    "GameEventsCategoryInsertResponse": {
+      "required": ["category"],
+      "properties": {
+        "category": {
+          "type": "object",
+          "$ref": "#\/definitions\/AnkamaModelsGameEventsCategory",
+          "description": "The generated id"
+        }
+      }
+    },
+    "GameEventsCategoryUpdateResponse": {
+      "required": ["success"],
+      "properties": {
+        "success": {
+          "type": "boolean",
+          "description": "no description"
+        }
+      }
+    },
+    "MoneyBalance": {
+      "required": [
+        "currency",
+        "amount"
+      ],
+      "properties": {
+        "currency": {
+          "type": "string",
+          "description": "Valid currency\n- OGR : Ogrins\n- KRZ : Krozs"
+        },
+        "amount": {
+          "type": "number",
+          "description": "Money balance"
+        }
+      }
+    },
+    "ShopReferenceTypeIceGift": {
+      "required": [
+        "image",
+        "description",
+        "name",
+        "id",
+        "metas"
+      ],
+      "properties": {
+        "image": {"type": "string"},
+        "description": {"type": "string"},
+        "name": {"type": "string"},
+        "id": {"type": "integer"},
+        "metas": {
+          "type": "object",
+          "additionalProperties": {"type": "string"}
+        }
+      }
+    },
+    "ShopReferenceTypeVirtualGift": {
+      "required": [
+        "image",
+        "description",
+        "name",
+        "id"
+      ],
+      "properties": {
+        "image": {"type": "string"},
+        "description": {"type": "string"},
+        "name": {"type": "string"},
+        "id": {"type": "integer"}
+      }
+    },
+    "KardTypeKrosmaster": {
+      "required": [
+        "id",
+        "name",
+        "pedestal_id",
+        "pedestal_name"
+      ],
+      "properties": {
+        "id": {"type": "integer"},
+        "name": {"type": "string"},
+        "pedestal_id": {"type": "integer"},
+        "pedestal_name": {"type": "string"}
+      }
+    },
+    "KardKard": {
+      "required": [
+        "id",
+        "name",
+        "description",
+        "type",
+        "kards",
+        "content_krosmaster"
+      ],
+      "properties": {
+        "id": {"type": "integer"},
+        "name": {"type": "string"},
+        "description": {"type": "string"},
+        "type": {"type": "string"},
+        "kards": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#\/definitions\/KardKard"
+          }
+        },
+        "content_krosmaster": {
+          "type": "object",
+          "$ref": "#\/definitions\/KardTypeKrosmaster"
+        }
+      }
+    },
+    "ShopReferenceTypeKard": {
+      "required": [
+        "id",
+        "type",
+        "name",
+        "description",
+        "image",
+        "kards"
+      ],
+      "properties": {
+        "id": {"type": "integer"},
+        "type": {"type": "string"},
+        "name": {"type": "string"},
+        "description": {"type": "string"},
+        "image": {"type": "string"},
+        "kards": {
+          "type": "object",
+          "$ref": "#\/definitions\/KardKard"
+        }
+      }
+    },
+    "ShopReferenceTypeKrosmaster": {
+      "required": [
+        "pedestal",
+        "id"
+      ],
+      "properties": {
+        "pedestal": {"type": "integer"},
+        "id": {
+          "type": "integer",
+          "description": "Figurine Id"
+        }
+      }
+    },
+    "ShopReference": {
+      "required": [
+        "description",
+        "name",
+        "free",
+        "quantity",
+        "type",
+        "content_icegift",
+        "content_virtualgift",
+        "content_kard",
+        "content_krosmaster"
+      ],
+      "properties": {
+        "description": {"type": "string"},
+        "name": {"type": "string"},
+        "free": {"type": "boolean"},
+        "quantity": {"type": "integer"},
+        "type": {"type": "string"},
+        "content_icegift": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#\/definitions\/ShopReferenceTypeIceGift"
+          }
+        },
+        "content_virtualgift": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#\/definitions\/ShopReferenceTypeVirtualGift"
+          }
+        },
+        "content_kard": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#\/definitions\/ShopReferenceTypeKard"
+          }
+        },
+        "content_krosmaster": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#\/definitions\/ShopReferenceTypeKrosmaster"
+          }
+        }
+      }
+    },
+    "ShopPromo": {
+      "required": [
+        "name",
+        "description",
+        "image"
+      ],
+      "properties": {
+        "name": {"type": "string"},
+        "description": {"type": "string"},
+        "image": {"type": "string"}
+      }
+    },
+    "ShopArticle": {
+      "required": [
+        "id",
+        "key",
+        "name",
+        "subtitle",
+        "description",
+        "currency",
+        "original_price",
+        "price",
+        "startdate",
+        "enddate",
+        "stock",
+        "image",
+        "references",
+        "promo"
+      ],
+      "properties": {
+        "id": {"type": "integer"},
+        "key": {"type": "string"},
+        "name": {"type": "string"},
+        "subtitle": {"type": "string"},
+        "description": {"type": "string"},
+        "currency": {"type": "string"},
+        "original_price": {"type": "number"},
+        "price": {"type": "number"},
+        "startdate": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "enddate": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "stock": {"type": "integer"},
+        "image": {"type": "string"},
+        "references": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#\/definitions\/ShopReference"
+          }
+        },
+        "promo": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#\/definitions\/ShopPromo"
+          }
+        }
+      }
+    },
+    "ShopCategory": {
+      "required": [
+        "id",
+        "key",
+        "name",
+        "displaymode",
+        "description",
+        "url",
+        "child"
+      ],
+      "properties": {
+        "id": {
+          "type": "integer",
+          "description": "Auto increment"
+        },
+        "key": {"type": "string"},
+        "name": {"type": "string"},
+        "displaymode": {
+          "type": "string",
+          "description": "Display available for this category\n- LIST\n- MOSAIC\n- BANNER"
+        },
+        "description": {"type": "string"},
+        "url": {"type": "string"},
+        "child": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#\/definitions\/ShopCategory"
+          },
+          "description": "Child category"
+        }
+      }
+    },
+    "ShopImage": {
+      "required": [
+        "width",
+        "height",
+        "url"
+      ],
+      "properties": {
+        "width": {"type": "integer"},
+        "height": {"type": "integer"},
+        "url": {"type": "string"}
+      }
+    },
+    "ShopGondolaHead": {
+      "required": [
+        "image",
+        "home",
+        "main",
+        "link",
+        "name",
+        "id"
+      ],
+      "properties": {
+        "image": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#\/definitions\/ShopImage"
+          }
+        },
+        "home": {"type": "boolean"},
+        "main": {"type": "boolean"},
+        "link": {"type": "string"},
+        "name": {"type": "string"},
+        "id": {"type": "integer"}
+      }
+    },
+    "ShopHighlight": {
+      "required": [
+        "id",
+        "image",
+        "mode",
+        "type",
+        "link",
+        "description",
+        "name",
+        "external_category",
+        "external_article",
+        "external_gondolahead",
+        "external_direct"
+      ],
+      "properties": {
+        "id": {"type": "integer"},
+        "image": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#\/definitions\/ShopImage"
+          }
+        },
+        "mode": {
+          "type": "string",
+          "description": "Display mode\n- IMAGE\n- CAROUSEL"
+        },
+        "type": {
+          "type": "string",
+          "description": "Type of Highlight for external\n- CATEGORY\n- ARTICLE\n- GONDOLAHEAD\n- DIRECT\n- NONE"
+        },
+        "link": {"type": "string"},
+        "description": {"type": "string"},
+        "name": {"type": "string"},
+        "external_category": {
+          "type": "object",
+          "$ref": "#\/definitions\/ShopCategory"
+        },
+        "external_article": {
+          "type": "object",
+          "$ref": "#\/definitions\/ShopArticle"
+        },
+        "external_gondolahead": {
+          "type": "object",
+          "$ref": "#\/definitions\/ShopGondolaHead"
+        },
+        "external_direct": {
+          "type": "string",
+          "description": "A simple http link"
+        }
+      }
+    },
+    "ShopHome": {
+      "required": [
+        "categories",
+        "gondolahead_main",
+        "gondolahead_article",
+        "hightlight_carousel",
+        "hightlight_image"
+      ],
+      "properties": {
+        "categories": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#\/definitions\/ShopCategory"
+          }
+        },
+        "gondolahead_main": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#\/definitions\/ShopGondolaHead"
+          }
+        },
+        "gondolahead_article": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#\/definitions\/ShopArticle"
+          }
+        },
+        "hightlight_carousel": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#\/definitions\/ShopHighlight"
+          }
+        },
+        "hightlight_image": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#\/definitions\/ShopHighlight"
+          }
+        }
+      }
+    },
+    "ShopBuyResult": {
+      "required": [
+        "balance",
+        "order_id"
+      ],
+      "properties": {
+        "balance": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#\/definitions\/MoneyBalance"
+          }
+        },
+        "order_id": {"type": "integer"}
+      }
+    },
+    "ShopBuyError": {
       "required": ["reason"],
       "properties": {
         "reason": {
           "type": "string",
-          "description": "The reason for login failed\n- BAN : The account is ban\n- BLACKLIST : The Ip used is blacklist\n- LOCKED : The account is locked\n- DELETED : The account is deleted\n- RESETANKAMA : The account need a reset on account management\n- OTPTIMEFAILED : The account need to be unlock by Ankama Authenticator\n- SECURITYCARD : The account need a security card\n- BRUTEFORCE : The ip used is blacklist due to bruteforce\n- FAILED : The login / password is invalid\n- PARTNER : The account is not allowed due to Partner limitation\n- MAILNOVALID : The mail is invalid and need to be validated on account management\n- BETACLOSED : The account is not allowed on this beta close"
+          "description": "The reason for buy failed\n- NOPRICE : No price for the article\n- STOCKMISSING : Some articles are out of stock\n- PAIDFAILED : Order can't be paid\n- CANCELFAILED : Order can't be canceled\n- MISSINGMONEY : Missing money on this account\n- PARTNER_ERROR : Error calling the Partner API"
         }
       }
     },
-    "Exception": {
+    "HaapiException": {
       "required": [
         "status",
         "message"
@@ -249,9 +2268,10 @@
         "type": {"type": "string"},
         "stack_trace": {
           "type": "array",
-          "items": { "type": "string" }
+          "items": {"type": "string"}
         },
-        "code": {"type": "integer"}
+        "code": {"type": "integer"},
+        "detail": {"type": "string"}
       }
     }
   }
