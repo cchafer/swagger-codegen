@@ -1,7 +1,7 @@
 package {{package}}
 
-{{#imports}}import {{import}}
-{{/imports}}
+import {{invokerPackage}}.ApiModel
+import org.joda.time.DateTime
 
 {{#models}}
 
@@ -10,6 +10,6 @@ package {{package}}
 case class {{classname}} (
   {{#vars}}{{#description}}/* {{{description}}} */
   {{/description}}{{name}}: {{{datatype}}}{{#hasMore}},{{/hasMore}}{{^hasMore}}){{/hasMore}}
-  {{/vars}}
+  {{/vars}} extends ApiModel
 {{/model}}
 {{/models}}

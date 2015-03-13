@@ -59,6 +59,63 @@
         "tags": ["Account"]
       }
     },
+    "\/Account\/CreateGhost": {
+      "get": {
+        "description": "Create an Ankama Ghost Account without any password",
+        "operationId": "CreateGhost",
+        "parameters": [
+          {
+            "name": "game",
+            "in": "query",
+            "description": "gameId",
+            "type": "integer",
+            "required": true
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "description": "language for error display",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "uid",
+            "in": "query",
+            "description": "A game internal unique Id",
+            "type": "string",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {"$ref": "#\/definitions\/Account"},
+            "headers": {
+              "X-Duration": {
+                "description": "Api Duration",
+                "type": "number"
+              }
+            }
+          },
+          "601": {
+            "description": "a translasted reason",
+            "schema": {"$ref": "#\/definitions\/ErrorTranslated"},
+            "headers": {
+              "X-Duration": {
+                "description": "Api Duration",
+                "type": "number"
+              }
+            }
+          },
+          "500": {
+            "description": "Unable to create ankama account",
+            "schema": {"$ref": "#\/definitions\/HaapiException"}
+          }
+        },
+        "security": [{"AuthPassword": []}],
+        "tags": ["Account"]
+      }
+    },
     "\/Account\/CreateGuest": {
       "get": {
         "description": "Create an Ankama Guest Account",
@@ -81,10 +138,9 @@
           {
             "name": "web_params",
             "in": "query",
-            "description": "",
-            "type": "object",
-            "required": false,
-            "additionalProperties": {"type": "string"}
+            "description": "data passed by web",
+            "type": "string",
+            "required": false
           }
         ],
         "responses": {
@@ -103,8 +159,8 @@
             }
           },
           "601": {
-            "description": "login failed",
-            "schema": {"$ref": "#\/definitions\/ErrorAccountLogin"},
+            "description": "a translasted reason",
+            "schema": {"$ref": "#\/definitions\/ErrorTranslated"},
             "headers": {
               "X-Duration": {
                 "description": "Api Duration",
@@ -131,14 +187,6 @@
             "description": "gameId",
             "type": "integer",
             "required": true
-          },
-          {
-            "name": "data",
-            "in": "query",
-            "description": "data to pass to game",
-            "type": "object",
-            "required": false,
-            "additionalProperties": {"type": "string"}
           }
         ],
         "responses": {
@@ -183,14 +231,6 @@
             "description": "gameId",
             "type": "integer",
             "required": true
-          },
-          {
-            "name": "data",
-            "in": "formData",
-            "description": "data to pass to game",
-            "type": "object",
-            "required": false,
-            "additionalProperties": {"type": "string"}
           }
         ],
         "responses": {
@@ -215,6 +255,267 @@
             }
           }
         },
+        "tags": ["Account"]
+      }
+    },
+    "\/Account\/SetNickname": {
+      "post": {
+        "consumes": ["application\/x-www-form-urlencoded"],
+        "description": "Set the nickname of account",
+        "operationId": "SetNickname",
+        "parameters": [
+          {
+            "name": "account_id",
+            "in": "formData",
+            "description": "",
+            "type": "integer",
+            "required": true
+          },
+          {
+            "name": "nickname",
+            "in": "formData",
+            "description": "",
+            "type": "string",
+            "required": true
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "updated nickname",
+            "headers": {
+              "X-Duration": {
+                "description": "Api Duration",
+                "type": "number"
+              }
+            }
+          },
+          "602": {
+            "description": "",
+            "schema": {"$ref": "#\/definitions\/ErrorAccountNicknameSet"},
+            "headers": {
+              "X-Duration": {
+                "description": "Api Duration",
+                "type": "number"
+              }
+            }
+          }
+        },
+        "security": [{"AuthPassword": []}],
+        "tags": ["Account"]
+      }
+    },
+    "\/Account\/SignOff": {
+      "post": {
+        "consumes": ["application\/x-www-form-urlencoded"],
+        "description": "SignOff an account account",
+        "operationId": "SignOff",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "formData",
+            "description": "Account Session Id",
+            "type": "integer",
+            "required": true
+          },
+          {
+            "name": "os",
+            "in": "formData",
+            "description": "",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "device",
+            "in": "formData",
+            "description": "",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "connection_type",
+            "in": "formData",
+            "description": "",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "client_type",
+            "in": "formData",
+            "description": "",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "partner",
+            "in": "formData",
+            "description": "",
+            "type": "string",
+            "required": false
+          },
+          {
+            "name": "device_uid",
+            "in": "formData",
+            "description": "",
+            "type": "string",
+            "required": false
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "operation",
+            "headers": {
+              "X-Duration": {
+                "description": "Api Duration",
+                "type": "number"
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid session id",
+            "schema": {"$ref": "#\/definitions\/HaapiException"}
+          }
+        },
+        "security": [{"AuthPassword": []}],
+        "tags": ["Account"]
+      }
+    },
+    "\/Account\/SignOnWithApiKey": {
+      "post": {
+        "consumes": ["application\/x-www-form-urlencoded"],
+        "description": "SignOn an Ankama Account with ApiKey",
+        "operationId": "SignOnWithApiKey",
+        "parameters": [
+          {
+            "name": "game",
+            "in": "formData",
+            "description": "gameId",
+            "type": "integer",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "login succeeded",
+            "schema": {"$ref": "#\/definitions\/SessionLogin"},
+            "headers": {
+              "X-Duration": {
+                "description": "Api Duration",
+                "type": "number"
+              }
+            }
+          },
+          "601": {
+            "description": "login failed",
+            "schema": {"$ref": "#\/definitions\/ErrorAccountLogin"},
+            "headers": {
+              "X-Duration": {
+                "description": "Api Duration",
+                "type": "number"
+              }
+            }
+          },
+          "603": {
+            "description": "ApiAuth Failed : bad ApiKey (expired or invalid) or bad Password",
+            "schema": {"$ref": "#\/definitions\/HaapiException"}
+          }
+        },
+        "security": [{"AuthAnkamaApiKey": []}],
+        "tags": ["Account"]
+      }
+    },
+    "\/Account\/SignOnWithGhostUid": {
+      "post": {
+        "consumes": ["application\/x-www-form-urlencoded"],
+        "description": "SignOn an Ankama Account with login & password\n\nConnection from game server",
+        "operationId": "SignOnWithGhostUid",
+        "parameters": [
+          {
+            "name": "uid",
+            "in": "formData",
+            "description": "A game internal unique Id",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "ip",
+            "in": "formData",
+            "description": "ip",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "game",
+            "in": "formData",
+            "description": "gameId",
+            "type": "integer",
+            "required": true
+          },
+          {
+            "name": "os",
+            "in": "formData",
+            "description": "",
+            "type": "string",
+            "required": false
+          },
+          {
+            "name": "device",
+            "in": "formData",
+            "description": "",
+            "type": "string",
+            "required": false
+          },
+          {
+            "name": "connection_type",
+            "in": "formData",
+            "description": "",
+            "type": "string",
+            "required": false
+          },
+          {
+            "name": "client_type",
+            "in": "formData",
+            "description": "",
+            "type": "string",
+            "required": false
+          },
+          {
+            "name": "partner",
+            "in": "formData",
+            "description": "",
+            "type": "string",
+            "required": false
+          },
+          {
+            "name": "device_uid",
+            "in": "formData",
+            "description": "",
+            "type": "string",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "login succeeded",
+            "schema": {"$ref": "#\/definitions\/SessionLogin"},
+            "headers": {
+              "X-Duration": {
+                "description": "Api Duration",
+                "type": "number"
+              }
+            }
+          },
+          "601": {
+            "description": "login failed",
+            "schema": {"$ref": "#\/definitions\/ErrorAccountLogin"},
+            "headers": {
+              "X-Duration": {
+                "description": "Api Duration",
+                "type": "number"
+              }
+            }
+          }
+        },
+        "security": [{"AuthPassword": []}],
         "tags": ["Account"]
       }
     },
@@ -256,7 +557,7 @@
         "responses": {
           "200": {
             "description": "login succeeded",
-            "schema": {"$ref": "#\/definitions\/AccountSession"},
+            "schema": {"$ref": "#\/definitions\/SessionLogin"},
             "headers": {
               "X-Duration": {
                 "description": "Api Duration",
@@ -310,7 +611,7 @@
         "responses": {
           "200": {
             "description": "login succeeded",
-            "schema": {"$ref": "#\/definitions\/AccountSession"},
+            "schema": {"$ref": "#\/definitions\/SessionLogin"},
             "headers": {
               "X-Duration": {
                 "description": "Api Duration",
@@ -366,7 +667,8 @@
             "description": "meta data to add to token",
             "type": "array",
             "required": false,
-            "items": {"type": "string"}
+            "items": {"type": "string"},
+            "collectionFormat": "multi"
           }
         ],
         "responses": {
@@ -420,15 +722,8 @@
             "description": "meta data to add to token",
             "type": "array",
             "required": false,
-            "items": {"type": "string"}
-          },
-          {
-            "name": "data",
-            "in": "formData",
-            "description": "Data stored with ApiKey",
-            "type": "object",
-            "required": false,
-            "additionalProperties": {"type": "string"}
+            "items": {"type": "string"},
+            "collectionFormat": "multi"
           }
         ],
         "responses": {
@@ -453,7 +748,7 @@
         "operationId": "DeleteApiKey",
         "responses": {
           "204": {
-            "description": "successful deleted",
+            "description": "deleted",
             "headers": {
               "X-Duration": {
                 "description": "Api Duration",
@@ -510,6 +805,138 @@
         "tags": ["Game"]
       }
     },
+    "\/Game\/EndSession": {
+      "get": {
+        "description": "Log a game session data",
+        "operationId": "EndSession",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "query",
+            "description": "the game session id",
+            "type": "integer",
+            "required": true
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "operation",
+            "headers": {
+              "X-Duration": {
+                "description": "Api Duration",
+                "type": "number"
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid session id",
+            "schema": {"$ref": "#\/definitions\/HaapiException"}
+          }
+        },
+        "security": [{"AuthPassword": []}],
+        "tags": ["Game"]
+      }
+    },
+    "\/Game\/SendEvent": {
+      "post": {
+        "consumes": ["application\/x-www-form-urlencoded"],
+        "description": "Send event analytics",
+        "operationId": "SendEvent",
+        "parameters": [
+          {
+            "name": "game",
+            "in": "formData",
+            "description": "gameId",
+            "type": "integer",
+            "required": true
+          },
+          {
+            "name": "session_id",
+            "in": "formData",
+            "description": "the game session id",
+            "type": "integer",
+            "required": true
+          },
+          {
+            "name": "event_id",
+            "in": "formData",
+            "description": "",
+            "type": "integer",
+            "required": true
+          },
+          {
+            "name": "data",
+            "in": "formData",
+            "description": "",
+            "type": "string",
+            "required": true
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "operation",
+            "headers": {
+              "X-Duration": {
+                "description": "Api Duration",
+                "type": "number"
+              }
+            }
+          }
+        },
+        "security": [{"AuthAes": []}],
+        "tags": ["Game"]
+      }
+    },
+    "\/Game\/StartSession": {
+      "get": {
+        "description": "Log a game session data",
+        "operationId": "StartSession",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "query",
+            "description": "the account session id",
+            "type": "integer",
+            "required": true
+          },
+          {
+            "name": "server_id",
+            "in": "query",
+            "description": "",
+            "type": "integer",
+            "required": false
+          },
+          {
+            "name": "character_id",
+            "in": "query",
+            "description": "",
+            "type": "integer",
+            "required": false
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "operation",
+            "headers": {
+              "X-Duration": {
+                "description": "Api Duration",
+                "type": "number"
+              },
+              "X-Id": {
+                "description": "The generated game session id",
+                "type": "string"
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid session id",
+            "schema": {"$ref": "#\/definitions\/HaapiException"}
+          }
+        },
+        "security": [{"AuthPassword": []}],
+        "tags": ["Game"]
+      }
+    },
     "\/Game\/Events\/Category\/Delete": {
       "get": {
         "description": "Delete a category",
@@ -549,8 +976,11 @@
         "operationId": "GetAll",
         "responses": {
           "200": {
-            "description": "code 200 response",
-            "schema": {"$ref": "#\/definitions\/GameEventsCategoryGetAllResponse"},
+            "description": "categories",
+            "schema": {
+              "type": "array",
+              "items": {"$ref": "#\/definitions\/GameEventsCategory"}
+            },
             "headers": {
               "X-Duration": {
                 "description": "Api Duration",
@@ -578,8 +1008,8 @@
         ],
         "responses": {
           "200": {
-            "description": "code 200 response",
-            "schema": {"$ref": "#\/definitions\/GameEventsCategoryGetByIdResponse"},
+            "description": "$category",
+            "schema": {"$ref": "#\/definitions\/GameEventsCategory"},
             "headers": {
               "X-Duration": {
                 "description": "Api Duration",
@@ -619,8 +1049,8 @@
         ],
         "responses": {
           "200": {
-            "description": "code 200 response",
-            "schema": {"$ref": "#\/definitions\/GameEventsCategoryInsertResponse"},
+            "description": "$category the generated id",
+            "schema": {"$ref": "#\/definitions\/GameEventsCategory"},
             "headers": {
               "X-Duration": {
                 "description": "Api Duration",
@@ -689,10 +1119,77 @@
         "tags": ["Game\/Events\/Category"]
       }
     },
+    "\/Kard\/ConsumeByOrderId": {
+      "get": {
+        "description": "Consume Kard from an order",
+        "operationId": "ConsumeByOrderId",
+        "parameters": [
+          {
+            "name": "lang",
+            "in": "query",
+            "description": "",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "order_id",
+            "in": "query",
+            "description": "",
+            "type": "integer",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "type": "array",
+              "items": {"$ref": "#\/definitions\/KardKard"}
+            },
+            "headers": {
+              "X-Duration": {
+                "description": "Api Duration",
+                "type": "number"
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid account id",
+            "schema": {"$ref": "#\/definitions\/HaapiException"}
+          },
+          "602": {
+            "description": "No kards to consume on this order",
+            "schema": {"$ref": "#\/definitions\/HaapiException"}
+          }
+        },
+        "security": [{"AuthAnkamaApiKey": []}],
+        "tags": ["Kard"]
+      }
+    },
     "\/Money\/KrozAmount": {
       "get": {
-        "description": "Return global account for game and amount in kroz",
+        "description": "Return kroz amount",
         "operationId": "KrozAmount",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {"$ref": "#\/definitions\/MoneyBalance"},
+            "headers": {
+              "X-Duration": {
+                "description": "Api Duration",
+                "type": "number"
+              }
+            }
+          }
+        },
+        "security": [{"AuthAnkamaApiKey": []}],
+        "tags": ["Money"]
+      }
+    },
+    "\/Money\/KrozAmountWithPassword": {
+      "get": {
+        "description": "Return kroz amount",
+        "operationId": "KrozAmountWithPassword",
         "parameters": [
           {
             "name": "account",
@@ -771,8 +1268,28 @@
     },
     "\/Money\/OgrinsAmount": {
       "get": {
-        "description": "Return global account for game and amount in ogrine",
+        "description": "Return ogrine amount",
         "operationId": "OgrinsAmount",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {"$ref": "#\/definitions\/MoneyBalance"},
+            "headers": {
+              "X-Duration": {
+                "description": "Api Duration",
+                "type": "number"
+              }
+            }
+          }
+        },
+        "security": [{"AuthAnkamaApiKey": []}],
+        "tags": ["Money"]
+      }
+    },
+    "\/Money\/OgrinsAmountWithPassword": {
+      "get": {
+        "description": "Return ogrine amount",
+        "operationId": "OgrinsAmountWithPassword",
         "parameters": [
           {
             "name": "account",
@@ -807,20 +1324,6 @@
         "description": "Returns list of articles",
         "operationId": "ArticlesListByCategory",
         "parameters": [
-          {
-            "name": "shop_key",
-            "in": "query",
-            "description": "",
-            "type": "string",
-            "required": true
-          },
-          {
-            "name": "lang",
-            "in": "query",
-            "description": "",
-            "type": "string",
-            "required": true
-          },
           {
             "name": "category_id",
             "in": "query",
@@ -872,20 +1375,6 @@
         "operationId": "ArticlesListByCategoryKey",
         "parameters": [
           {
-            "name": "shop_key",
-            "in": "query",
-            "description": "",
-            "type": "string",
-            "required": true
-          },
-          {
-            "name": "lang",
-            "in": "query",
-            "description": "",
-            "type": "string",
-            "required": true
-          },
-          {
             "name": "key",
             "in": "query",
             "description": "",
@@ -935,20 +1424,6 @@
         "description": "Returns list of articles by a gondola head",
         "operationId": "ArticlesListByGondolahead",
         "parameters": [
-          {
-            "name": "shop_key",
-            "in": "query",
-            "description": "",
-            "type": "string",
-            "required": true
-          },
-          {
-            "name": "lang",
-            "in": "query",
-            "description": "",
-            "type": "string",
-            "required": true
-          },
           {
             "name": "gondolahead_id",
             "in": "query",
@@ -1000,26 +1475,13 @@
         "operationId": "ArticlesListByIds",
         "parameters": [
           {
-            "name": "shop_key",
-            "in": "query",
-            "description": "",
-            "type": "string",
-            "required": true
-          },
-          {
-            "name": "lang",
-            "in": "query",
-            "description": "",
-            "type": "string",
-            "required": true
-          },
-          {
             "name": "ids",
             "in": "query",
             "description": "",
             "type": "array",
             "required": true,
-            "items": {"type": "integer"}
+            "items": {"type": "integer"},
+            "collectionFormat": "multi"
           }
         ],
         "responses": {
@@ -1051,26 +1513,13 @@
         "operationId": "ArticlesListByKey",
         "parameters": [
           {
-            "name": "shop_key",
-            "in": "query",
-            "description": "",
-            "type": "string",
-            "required": true
-          },
-          {
-            "name": "lang",
-            "in": "query",
-            "description": "",
-            "type": "string",
-            "required": true
-          },
-          {
             "name": "key",
             "in": "query",
             "description": "",
             "type": "array",
             "required": true,
-            "items": {"type": "string"}
+            "items": {"type": "string"},
+            "collectionFormat": "multi"
           }
         ],
         "responses": {
@@ -1102,20 +1551,6 @@
         "operationId": "ArticlesListSearch",
         "parameters": [
           {
-            "name": "shop_key",
-            "in": "query",
-            "description": "",
-            "type": "string",
-            "required": true
-          },
-          {
-            "name": "lang",
-            "in": "query",
-            "description": "",
-            "type": "string",
-            "required": true
-          },
-          {
             "name": "text",
             "in": "query",
             "description": "",
@@ -1123,12 +1558,13 @@
             "required": true
           },
           {
-            "name": "catogories_id",
+            "name": "categories_ids",
             "in": "query",
             "description": "",
             "type": "array",
             "required": false,
-            "items": {"type": "integer"}
+            "items": {"type": "integer"},
+            "collectionFormat": "multi"
           },
           {
             "name": "page",
@@ -1172,22 +1608,6 @@
       "get": {
         "description": "Returns list of categories",
         "operationId": "CategoriesList",
-        "parameters": [
-          {
-            "name": "shop_key",
-            "in": "query",
-            "description": "",
-            "type": "string",
-            "required": true
-          },
-          {
-            "name": "lang",
-            "in": "query",
-            "description": "",
-            "type": "string",
-            "required": true
-          }
-        ],
         "responses": {
           "200": {
             "description": "",
@@ -1212,20 +1632,6 @@
         "description": "Returns list of categories by key",
         "operationId": "CategoriesListByKey",
         "parameters": [
-          {
-            "name": "shop_key",
-            "in": "query",
-            "description": "",
-            "type": "string",
-            "required": true
-          },
-          {
-            "name": "lang",
-            "in": "query",
-            "description": "",
-            "type": "string",
-            "required": true
-          },
           {
             "name": "key",
             "in": "query",
@@ -1257,25 +1663,104 @@
         "tags": ["Shop"]
       }
     },
-    "\/Shop\/GondolaHeadsList": {
-      "get": {
-        "description": "Returns list of gondola heads",
-        "operationId": "GondolaHeadsList",
+    "\/Shop\/CreateApiKey": {
+      "post": {
+        "consumes": ["application\/x-www-form-urlencoded"],
+        "description": "Create an apikey for an account_id directly from server",
+        "operationId": "CreateApiKey",
         "parameters": [
           {
             "name": "shop_key",
-            "in": "query",
-            "description": "",
+            "in": "formData",
+            "description": "The shop key provide by web team",
             "type": "string",
             "required": true
           },
           {
             "name": "lang",
-            "in": "query",
-            "description": "",
+            "in": "formData",
+            "description": "Display language",
             "type": "string",
             "required": true
           },
+          {
+            "name": "account_id",
+            "in": "formData",
+            "description": "AccountId",
+            "type": "integer",
+            "required": true
+          },
+          {
+            "name": "ip",
+            "in": "formData",
+            "description": "Current Account Ip",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "character_id",
+            "in": "formData",
+            "description": "The current connected CharacterId",
+            "type": "integer",
+            "required": false
+          },
+          {
+            "name": "server_id",
+            "in": "formData",
+            "description": "the current server",
+            "type": "integer",
+            "required": false
+          },
+          {
+            "name": "country",
+            "in": "formData",
+            "description": "The country (used for partner like Steam only for true money payment)",
+            "type": "string",
+            "required": false
+          },
+          {
+            "name": "currency",
+            "in": "formData",
+            "description": "True Money currency only (used for partner like Steam only for true money payment)",
+            "type": "string",
+            "required": false
+          },
+          {
+            "name": "payment_mode",
+            "in": "formData",
+            "description": "True Money paymentmode only (used for partner like Steam only for true money payment)",
+            "type": "string",
+            "required": false
+          },
+          {
+            "name": "steam_id",
+            "in": "formData",
+            "description": "SteamId (used for partner like Steam only for true money payment)",
+            "type": "string",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {"$ref": "#\/definitions\/ApiKey"},
+            "headers": {
+              "X-Duration": {
+                "description": "Api Duration",
+                "type": "number"
+              }
+            }
+          }
+        },
+        "security": [{"AuthPassword": []}],
+        "tags": ["Shop"]
+      }
+    },
+    "\/Shop\/GondolaHeadsList": {
+      "get": {
+        "description": "Returns list of gondola heads",
+        "operationId": "GondolaHeadsList",
+        "parameters": [
           {
             "name": "home",
             "in": "query",
@@ -1316,20 +1801,6 @@
         "operationId": "HightLightsList",
         "parameters": [
           {
-            "name": "shop_key",
-            "in": "query",
-            "description": "",
-            "type": "string",
-            "required": true
-          },
-          {
-            "name": "lang",
-            "in": "query",
-            "description": "",
-            "type": "string",
-            "required": true
-          },
-          {
             "name": "type",
             "in": "query",
             "description": "type of highlight",
@@ -1367,22 +1838,6 @@
       "get": {
         "description": "Returns home elements",
         "operationId": "Home",
-        "parameters": [
-          {
-            "name": "shop_key",
-            "in": "query",
-            "description": "",
-            "type": "string",
-            "required": true
-          },
-          {
-            "name": "lang",
-            "in": "query",
-            "description": "",
-            "type": "string",
-            "required": true
-          }
-        ],
         "responses": {
           "200": {
             "description": "",
@@ -1404,20 +1859,6 @@
         "description": "Finalize transaction of an order",
         "operationId": "PartnerFinalizeTransaction",
         "parameters": [
-          {
-            "name": "shop_key",
-            "in": "query",
-            "description": "",
-            "type": "string",
-            "required": true
-          },
-          {
-            "name": "lang",
-            "in": "query",
-            "description": "",
-            "type": "string",
-            "required": true
-          },
           {
             "name": "finalize",
             "in": "query",
@@ -1464,20 +1905,6 @@
         "description": "Quick buy an article",
         "operationId": "QuickBuy",
         "parameters": [
-          {
-            "name": "shop_key",
-            "in": "query",
-            "description": "",
-            "type": "string",
-            "required": true
-          },
-          {
-            "name": "lang",
-            "in": "query",
-            "description": "",
-            "type": "string",
-            "required": true
-          },
           {
             "name": "article_id",
             "in": "query",
@@ -1641,6 +2068,7 @@
       }
     }
   },
+  "coucou": "toto",
   "securityDefinitions": {
     "AuthAnkamaApiKey": {
       "type": "apiKey",
@@ -1666,18 +2094,53 @@
       ],
       "properties": {
         "id": {"type": "integer"},
-        "type": {"type": "string"},
+        "type": {
+          "type": "string",
+          "description": "Account Type\n- ANKAMA : Full Ankama Account\n- EXTERNAL : Ankama Account without password and external providers auth\n- GUEST : Guest Ankama Account",
+          "items": {
+            "enum": [
+              "ANKAMA",
+              "EXTERNAL",
+              "GUEST"
+            ]
+          }
+        },
         "login": {"type": "string"},
         "nickname": {"type": "string"},
         "security": {
           "type": "array",
-          "items": {"type": "string"},
+          "items": {
+            "type": "string",
+            "enum": [
+              "SHIELD",
+              "AUTHENTICATOR"
+            ]
+          },
           "description": "Security enabled on this account\n- SHIELD : Ankama Shield activated\n- AUTHENTICATOR : Ankama Authenticator activated"
         },
         "lang": {"type": "string"},
         "community": {
-          "type": "integer",
-          "description": "Account Community\n- FR : 0\n- UK : 1\n- INT : 2\n- DE : 3\n- ES : 4\n- RU : 5\n- PT : 6\n- NL : 7\n- JP : 8\n- IT : 9\n- PH : 10\n- NA : 1\n- CN : 12;\n- ASIA : 13\n- TW : 14"
+          "type": "string",
+          "description": "Account Community\n- COMMUNITY_0 : FR\n- COMMUNITY_1 : UK\n- COMMUNITY_2 : INT\n- COMMUNITY_3 : DE\n- COMMUNITY_4 : ES\n- COMMUNITY_5 : RU\n- COMMUNITY_6 : PT\n- COMMUNITY_7 : NL\n- COMMUNITY_8 : JP\n- COMMUNITY_9 : IT\n- COMMUNITY_10 : PH\n- COMMUNITY_11 : NA\n- COMMUNITY_12 : CN\n- COMMUNITY_13 : ASIA\n- COMMUNITY_14 : TW",
+          "items": {
+            "enum": [
+              "COMMUNITY_0",
+              "COMMUNITY_1",
+              "COMMUNITY_2",
+              "COMMUNITY_3",
+              "COMMUNITY_4",
+              "COMMUNITY_5",
+              "COMMUNITY_6",
+              "COMMUNITY_7",
+              "COMMUNITY_8",
+              "COMMUNITY_9",
+              "COMMUNITY_10",
+              "COMMUNITY_11",
+              "COMMUNITY_12",
+              "COMMUNITY_13",
+              "COMMUNITY_14"
+            ]
+          }
         },
         "added_date": {
           "type": "string",
@@ -1695,12 +2158,19 @@
       "required": ["url"],
       "properties": {"url": {"type": "string"}}
     },
-    "ErrorAccountLogin": {
-      "required": ["reason"],
+    "ErrorTranslated": {
+      "required": [
+        "key",
+        "text"
+      ],
       "properties": {
-        "reason": {
+        "key": {
           "type": "string",
-          "description": "The reason for login failed\n- BAN : The account is ban\n- BLACKLIST : The Ip used is blacklist\n- LOCKED : The account is locked\n- DELETED : The account is deleted\n- RESETANKAMA : The account need a reset on account management\n- OTPTIMEFAILED : The account need to be unlock by Ankama Authenticator\n- SECURITYCARD : The account need a security card\n- BRUTEFORCE : The ip used is blacklist due to bruteforce\n- FAILED : The login \/ password is invalid\n- PARTNER : The account is not allowed due to Partner limitation\n- MAILNOVALID : The mail is invalid and need to be validated on account management\n- BETACLOSED : The account is not allowed on this beta close"
+          "description": "The reason for create failed"
+        },
+        "text": {
+          "type": "string",
+          "description": "The translated reason"
         }
       }
     },
@@ -1708,16 +2178,108 @@
       "required": ["token"],
       "properties": {"token": {"type": "string"}}
     },
-    "AccountSession": {
+    "ErrorAccountLogin": {
+      "required": ["reason"],
+      "properties": {
+        "reason": {
+          "type": "string",
+          "description": "The reason for login failed\n- BAN : The account is ban\n- BLACKLIST : The Ip used is blacklist\n- LOCKED : The account is locked\n- DELETED : The account is deleted\n- RESETANKAMA : The account need a reset on account management\n- OTPTIMEFAILED : The account need to be unlock by Ankama Authenticator\n- SECURITYCARD : The account need a security card\n- BRUTEFORCE : The ip used is blacklist due to bruteforce\n- FAILED : The login \/ password is invalid\n- PARTNER : The account is not allowed due to Partner limitation\n- MAILNOVALID : The mail is invalid and need to be validated on account management\n- BETACLOSED : The account is not allowed on this beta close",
+          "items": {
+            "enum": [
+              "BAN",
+              "BLACKLIST",
+              "LOCKED",
+              "DELETED",
+              "RESETANKAMA",
+              "OTPTIMEFAILED",
+              "SECURITYCARD",
+              "BRUTEFORCE",
+              "FAILED",
+              "PARTNER",
+              "MAILNOVALID",
+              "BETACLOSED"
+            ]
+          }
+        }
+      }
+    },
+    "ErrorAccountNicknameSet": {
+      "required": ["reason"],
+      "properties": {
+        "reason": {
+          "type": "string",
+          "description": "The reason for nickname set failed\n- LENGTH_TOOSMALL : The length is too small\n- LENGTH_EXCEEDED : The length is too long\n- DUPLICATE : The nickname is already used\n- INVALID_FORMAT : The format is invalid\n- INVALID_CONTENT : The nickname contains invalid word\n- INVALID_ACCOUNT : The account doesn't exists\n- LOGINEQUALSNICKNAME : Login must be different than email",
+          "items": {
+            "enum": [
+              "LENGTH_TOOSMALL",
+              "LENGTH_EXCEEDED",
+              "DUPLICATE",
+              "INVALID_FORMAT",
+              "INVALID_CONTENT",
+              "INVALID_ACCOUNT",
+              "LOGINEQUALSNICKNAME"
+            ]
+          }
+        }
+      }
+    },
+    "Game": {
       "required": [
-        "id",
-        "account"
+        "total_time_elapsed",
+        "first_subscription_date",
+        "expiration_date",
+        "ban_end_date",
+        "added_date",
+        "login_date",
+        "login_ip"
       ],
       "properties": {
-        "id": {"type": "integer"},
+        "total_time_elapsed": {
+          "type": "string",
+          "format": "date-time",
+          "description": "In seconds"
+        },
+        "first_subscription_date": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "expiration_date": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "ban_end_date": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "added_date": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "login_date": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "login_ip": {"type": "string"}
+      }
+    },
+    "SessionLogin": {
+      "required": [
+        "id",
+        "account",
+        "game"
+      ],
+      "properties": {
+        "id": {
+          "type": "integer",
+          "description": "Account Session Id"
+        },
         "account": {
           "type": "object",
           "$ref": "#\/definitions\/Account"
+        },
+        "game": {
+          "type": "object",
+          "$ref": "#\/definitions\/Game"
         }
       }
     },
@@ -1772,19 +2334,6 @@
         }
       }
     },
-    "GameEventsCategoryGetAllResponse": {
-      "required": ["categories"],
-      "properties": {
-        "categories": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#\/definitions\/GameEventsCategory"
-          },
-          "description": "no description"
-        }
-      }
-    },
     "GameEventsCategory": {
       "required": [
         "id",
@@ -1800,32 +2349,53 @@
         "name": {"type": "string"}
       }
     },
-    "GameEventsCategoryGetByIdResponse": {
-      "required": ["category"],
-      "properties": {
-        "category": {
-          "type": "object",
-          "$ref": "#\/definitions\/AnkamaModelsGameEventsCategory",
-          "description": "no description"
-        }
-      }
-    },
-    "GameEventsCategoryInsertResponse": {
-      "required": ["category"],
-      "properties": {
-        "category": {
-          "type": "object",
-          "$ref": "#\/definitions\/AnkamaModelsGameEventsCategory",
-          "description": "The generated id"
-        }
-      }
-    },
     "GameEventsCategoryUpdateResponse": {
       "required": ["success"],
       "properties": {
         "success": {
           "type": "boolean",
           "description": "no description"
+        }
+      }
+    },
+    "KardTypeKrosmaster": {
+      "required": [
+        "id",
+        "name",
+        "pedestal_id",
+        "pedestal_name"
+      ],
+      "properties": {
+        "id": {"type": "integer"},
+        "name": {"type": "string"},
+        "pedestal_id": {"type": "integer"},
+        "pedestal_name": {"type": "string"}
+      }
+    },
+    "KardKard": {
+      "required": [
+        "id",
+        "name",
+        "description",
+        "type",
+        "kard_multiple",
+        "kard_krosmaster"
+      ],
+      "properties": {
+        "id": {"type": "integer"},
+        "name": {"type": "string"},
+        "description": {"type": "string"},
+        "type": {"type": "string"},
+        "kard_multiple": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#\/definitions\/KardKard"
+          }
+        },
+        "kard_krosmaster": {
+          "type": "object",
+          "$ref": "#\/definitions\/KardTypeKrosmaster"
         }
       }
     },
@@ -1837,7 +2407,13 @@
       "properties": {
         "currency": {
           "type": "string",
-          "description": "Valid currency\n- OGR : Ogrins\n- KRZ : Krozs"
+          "description": "Valid currency\n- OGR : Ogrins\n- KRZ : Krozs",
+          "items": {
+            "enum": [
+              "OGR",
+              "KRZ"
+            ]
+          }
         },
         "amount": {
           "type": "number",
@@ -1878,47 +2454,6 @@
         "id": {"type": "integer"}
       }
     },
-    "KardTypeKrosmaster": {
-      "required": [
-        "id",
-        "name",
-        "pedestal_id",
-        "pedestal_name"
-      ],
-      "properties": {
-        "id": {"type": "integer"},
-        "name": {"type": "string"},
-        "pedestal_id": {"type": "integer"},
-        "pedestal_name": {"type": "string"}
-      }
-    },
-    "KardKard": {
-      "required": [
-        "id",
-        "name",
-        "description",
-        "type",
-        "kards",
-        "content_krosmaster"
-      ],
-      "properties": {
-        "id": {"type": "integer"},
-        "name": {"type": "string"},
-        "description": {"type": "string"},
-        "type": {"type": "string"},
-        "kards": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#\/definitions\/KardKard"
-          }
-        },
-        "content_krosmaster": {
-          "type": "object",
-          "$ref": "#\/definitions\/KardTypeKrosmaster"
-        }
-      }
-    },
     "ShopReferenceTypeKard": {
       "required": [
         "id",
@@ -1935,8 +2470,11 @@
         "description": {"type": "string"},
         "image": {"type": "string"},
         "kards": {
-          "type": "object",
-          "$ref": "#\/definitions\/KardKard"
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#\/definitions\/KardKard"
+          }
         }
       }
     },
@@ -1960,10 +2498,10 @@
         "free",
         "quantity",
         "type",
-        "content_icegift",
-        "content_virtualgift",
-        "content_kard",
-        "content_krosmaster"
+        "reference_icegift",
+        "reference_virtualgift",
+        "reference_kard",
+        "reference_krosmaster"
       ],
       "properties": {
         "description": {"type": "string"},
@@ -1971,28 +2509,28 @@
         "free": {"type": "boolean"},
         "quantity": {"type": "integer"},
         "type": {"type": "string"},
-        "content_icegift": {
+        "reference_icegift": {
           "type": "array",
           "items": {
             "type": "object",
             "$ref": "#\/definitions\/ShopReferenceTypeIceGift"
           }
         },
-        "content_virtualgift": {
+        "reference_virtualgift": {
           "type": "array",
           "items": {
             "type": "object",
             "$ref": "#\/definitions\/ShopReferenceTypeVirtualGift"
           }
         },
-        "content_kard": {
+        "reference_kard": {
           "type": "array",
           "items": {
             "type": "object",
             "$ref": "#\/definitions\/ShopReferenceTypeKard"
           }
         },
-        "content_krosmaster": {
+        "reference_krosmaster": {
           "type": "array",
           "items": {
             "type": "object",
@@ -2253,7 +2791,17 @@
       "properties": {
         "reason": {
           "type": "string",
-          "description": "The reason for buy failed\n- NOPRICE : No price for the article\n- STOCKMISSING : Some articles are out of stock\n- PAIDFAILED : Order can't be paid\n- CANCELFAILED : Order can't be canceled\n- MISSINGMONEY : Missing money on this account\n- PARTNER_ERROR : Error calling the Partner API"
+          "description": "The reason for buy failed\n- NOPRICE : No price for the article\n- STOCKMISSING : Some articles are out of stock\n- PAIDFAILED : Order can't be paid\n- CANCELFAILED : Order can't be canceled\n- MISSINGMONEY : Missing money on this account\n- PARTNER_ERROR : Error calling the Partner API",
+          "items": {
+            "enum": [
+              "NOPRICE",
+              "STOCKMISSING",
+              "PAIDFAILED",
+              "CANCELFAILED",
+              "MISSINGMONEY",
+              "PARTNER_ERROR"
+            ]
+          }
         }
       }
     },

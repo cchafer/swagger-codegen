@@ -1,42 +1,52 @@
 package {{invokerPackage}}
 
 import akka.actor.ActorSystem
-import spray.http.HttpHeaders.RawHeader
 import spray.http._
 
 import scala.concurrent.{ExecutionContext, Future}
 
 case class ApiRequest(
-  basePath: String,
-  operationPath: String,
-  contentType: String,
-  method: HttpMethod,
-  formParams: Map[String, String] = Map.empty,
-  queryParams: Map[String, String] = Map.empty,
-  headerParams: Map[String, String] = Map.empty,
-  responseHandler: (HttpResponse) => Any,
-  additionalHeaders: Map[String, String] = Map.empty,
-  credentials: Option[HttpCredentials] = None) {
+                       // required fields
+                       method: HttpMethod,
+                       basePath: String,
+                       operationPath: String,
+                       contentType: String,
 
-    def withoutCredentials = copy(credentials = None)
+                       // optional fields
+                       responses: Map[Int, Option[Class[_]]] = Map.empty,
+                       bodyParam: Option[Any] = None,
+                       formParams: Map[String, Any] = Map.empty,
+                       pathParams: Map[String, Any] = Map.empty,
+                       queryParams: Map[String, Any] = Map.empty,
+                       headerParams: Map[String, Any] = Map.empty,
+                       credentials: Option[HttpCredentials] = None) {
 
-    def withCredentials(cred: HttpCredentials) = copy(credentials = Some(cred))
+  def withoutCredentials = copy(credentials = None)
 
-    def withPassword(user: String, password: String) = copy(credentials = Some(BasicHttpCredentials(user, password)))
+  def withCredentials(cred: HttpCredentials) = copy(credentials = Some(cred))
 
-    def withHeader(name: String, value: String) = copy(additionalHeaders = additionalHeaders + (name -> value))
+  def withPassword(user: String, password: String) = copy(credentials = Some(BasicHttpCredentials(user, password)))
 
-    def withHeaders(headersToAdd: Map[String, String]) = copy(additionalHeaders = additionalHeaders ++ headersToAdd)
+  def withResponse[T](code: Int, responseClass: Option[Class[T]]) = copy(responses = responses + (code -> responseClass))
 
-    def relativePath = operationPath.replaceAll("\\{format\\}", "json")
+  def withDefaultResponse[T](responseClass: Option[Class[T]]) = withResponse(0, responseClass)
 
-    def uri(basePath: String) = Uri(basePath + relativePath).withQuery(queryParams)
+  def withoutBody() = copy(bodyParam = None)
 
-    def headers: List[HttpHeader] = (additionalHeaders ++ headerParams) map { case (u, v) => RawHeader(u, v)} toList
+  def withBody(body: Any) = copy(bodyParam = Some(body))
 
-    def execute(invoker: ApiInvoker)(implicit ec: ExecutionContext, system: ActorSystem): Future[Any] =
-      execute(ec, system, invoker)
+  def withFormParam(name: String, value: Any) = copy(formParams = formParams + (name -> value))
 
-    def execute(implicit ec: ExecutionContext, system: ActorSystem, invoker: ApiInvoker): Future[Any] =
-      invoker.execute(basePath, this) map responseHandler
+  def withPathParam(name: String, value: Any) = copy(pathParams = pathParams + (name -> value))
+
+  def withQueryParam(name: String, value: Any) = copy(queryParams = queryParams + (name -> value))
+
+  def withHeaderParam(name: String, value: Any) = copy(headerParams = headerParams + (name -> value))
+
+  def execute(invoker: ApiInvoker)(implicit ec: ExecutionContext, system: ActorSystem): Future[Any] =
+    execute(ec, system, invoker)
+
+  def execute(implicit ec: ExecutionContext, system: ActorSystem, invoker: ApiInvoker): Future[Any] =
+    invoker.execute(this)
+
 }

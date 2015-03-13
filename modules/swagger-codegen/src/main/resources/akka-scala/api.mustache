@@ -1,51 +1,33 @@
 package {{package}}
-
 {{#imports}}import {{import}}
 {{/imports}}
-import {{modelPackage}}._
 import {{invokerPackage}}._
-import akka.actor.ActorSystem
+import {{invokerPackage}}.ApiInvoker._
 import spray.http._
-import scala.util.{Failure, Success}
 
 {{#operations}}
-object {{classname}} extends JsonUnmarshalling {
-
-  import ApiUtils.Mappable._
+object {{classname}} {
 
 {{#operation}}
-  def {{operationId}}({{#allParams}}{{paramName}}: {{#required}}{{dataType}}{{/required}}{{^required}}Option[{{dataType}}]{{/required}}{{#defaultValue}} = {{{defaultValue}}}{{/defaultValue}}{{^defalutValue}}{{^required}} = None{{/required}}{{/defalutValue}}{{#hasMore}}, {{/hasMore}}{{/allParams}}) =
-    ApiRequest(
-      "{{basePath}}",
-      "{{path}}",
-      "application/x-www-form-urlencoded",
-      HttpMethods.{{httpMethod.toUpperCase}},
-      // FormParams
-      Map[String, String](){{#formParams}}
-          .add("{{paramName}}", {{paramName}}){{/formParams}},
-      // QueryParams
-      Map[String, String](){{#queryParams}}
-          .add("{{paramName}}", {{paramName}}){{/queryParams}},
-      // HeaderParams
-      Map[String, String](){{#headerParams}}
-          .add("{{paramName}}", {{paramName}})
-      {{/headerParams}},
-      { {{#responses}}{{^isWildcard}}
-          case response@HttpResponse(code, _, _, _) if code.intValue == {{code}} =>
-              {{#dataType}}extractFromJsonResponse[{{dataType}}](response){{/dataType}}{{^dataType}}ApiResponse(None, {{code}}, durationValue(response)){{/dataType}}
-          {{/isWildcard}}{{/responses}}
-        {{#responses}}{{#isWildcard}}
-          case response@HttpResponse(code, _, _, _) =>
-              {{#dataType}}extractFromJsonResponse[{{dataType}}](response){{/dataType}}{{^dataType}}ApiResponse(None, {{code}}, durationValue(response)){{/dataType}}
-        {{/isWildcard}}{{/responses}}
-        {{^hasWildcardResponse}}
-          case response@HttpResponse(code, entity, headers, _) =>
-            throw new RuntimeException("Answer not understood : " + code + " " + entity.toString)
-        {{/hasWildcardResponse}}
-      }
-    )
+  def {{operationId}}({{#allParams}}{{paramName}}: {{#required}}{{dataType}}{{/required}}{{^required}}{{#isContainer}}{{dataType}}{{/isContainer}}{{^isContainer}}Option[{{dataType}}]{{/isContainer}}{{/required}}{{#defaultValue}} = {{{defaultValue}}}{{/defaultValue}}{{^defalutValue}}{{^required}}{{^isContainer}} = None{{/isContainer}}{{/required}}{{/defalutValue}}{{#hasMore}}, {{/hasMore}}{{/allParams}}) =
+    ApiRequest(HttpMethods.{{httpMethod.toUpperCase}}, "{{basePath}}", "{{path}}", {{#consumes.0}}"{{mediaType}}"{{/consumes.0}}{{^consumes}}"application/json"{{/consumes}})
+      {{#bodyParam}}.withBody({{paramName}})
+      {{/bodyParam}}{{#formParams}}.withFormParam("{{baseName}}", {{#isContainer}}ArrayValues({{paramName}}{{#collectionFormat}}, {{collectionFormat.toUpperCase}}{{/collectionFormat}}){{/isContainer}}{{^isContainer}}{{paramName}}{{/isContainer}})
+      {{/formParams}}{{#queryParams}}.withQueryParam("{{baseName}}", {{#isContainer}}ArrayValues({{paramName}}{{#collectionFormat}}, {{collectionFormat.toUpperCase}}{{/collectionFormat}}){{/isContainer}}{{^isContainer}}{{paramName}}{{/isContainer}})
+      {{/queryParams}}{{#pathParams}}.withPathParam("{{baseName}}", {{#isContainer}}ArrayValues({{paramName}}{{#collectionFormat}}, {{collectionFormat.toUpperCase}}{{/collectionFormat}}){{/isContainer}}{{^isContainer}}{{paramName}}{{/isContainer}})
+      {{/pathParams}}{{#headerParams}}.withHeaderParam("{{baseName}}", {{#isContainer}}ArrayValues({{paramName}}{{#collectionFormat}}, {{collectionFormat.toUpperCaseapiIn}}{{/collectionFormat}}){{/isContainer}}{{^isContainer}}{{paramName}}{{/isContainer}})
+      {{/headerParams}}{{#responses}}{{^isWildcard}}{{#dataType}}.withResponse({{code}}, Some(classOf[{{dataType}}]))
+      {{/dataType}}{{^dataType}}.withResponse({{code}}, None)
+      {{/dataType}}{{/isWildcard}}{{/responses}}{{#responses}}{{#isWildcard}}{{#dataType}}.withDefaultResponse({{code}}, Some(classOf[{{dataType}}]))
+      {{/dataType}}{{^dataType}}.withDefaultResponse(None)
+      {{/dataType}}{{/isWildcard}}{{/responses}}
 
 {{/operation}}
+
+{{#unknownStatusCodes}}
+  ApiInvoker.addCustomStatusCode({{value}}, isSuccess = false)
+{{/unknownStatusCodes}}
+
 }
 
 {{/operations}}

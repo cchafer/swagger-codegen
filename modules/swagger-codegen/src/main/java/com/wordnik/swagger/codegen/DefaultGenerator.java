@@ -1,5 +1,6 @@
 package com.wordnik.swagger.codegen;
 
+import com.sun.xml.internal.bind.v2.runtime.output.SAXOutput;
 import com.wordnik.swagger.models.*;
 import com.wordnik.swagger.util.*;
 import com.samskivert.mustache.*;

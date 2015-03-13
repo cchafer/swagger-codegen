@@ -1,5 +1,6 @@
 package {{invokerPackage}}
 
+import java.io.File
 import java.net.URLEncoder
 import java.security.cert.X509Certificate
 import javax.net.ssl._
@@ -8,32 +9,127 @@ import akka.actor.ActorSystem
 import akka.io.IO
 import akka.pattern.ask
 import akka.util.Timeout
-import org.joda.time.DateTime
-import org.joda.time.format.ISODateTimeFormat
-import org.json4s.JsonAST.JString
+import org.json4s.ext.JodaTimeSerializers
 import org.json4s.jackson.JsonMethods._
-import org.json4s.{CustomSerializer, DefaultFormats, Serializer}
+import org.json4s.jackson.Serialization
+import org.json4s.{DefaultFormats, Extraction}
 import spray.can.Http
 import spray.can.Http.HostConnectorSetup
 import spray.client.pipelining
 import spray.client.pipelining._
+import spray.http.HttpEncodings._
+import spray.http.HttpHeaders.{RawHeader, `Accept-Encoding`}
+import spray.http.Uri.Query
 import spray.http._
 import spray.http.parser.HttpParser
-import spray.httpx.encoding.{Encoder, Gzip}
+import spray.httpx.encoding.{Deflate, Encoder, Gzip}
 import spray.httpx.unmarshalling._
 import spray.io.ClientSSLEngineProvider
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
+
+trait ApiModel
 
 object ApiInvoker {
 
   def apply()(implicit ec: ExecutionContext, system: ActorSystem): ApiInvoker = new ApiInvoker()
 
+  case class NumericValue(value: String) {
+    override def toString = value
+  }
+
+  object NumericValue {
+    def unapply(n: Any): Option[NumericValue] = n match {
+      case (_:Int | _:Long | _:Float | _:Double | _:Boolean | _:Byte) => Some(NumericValue(String.valueOf(n)))
+      case _ => None
+    }
+  }
+
+  case class CustomStatusCode(value: Int, reason: String = "Application-defined status code", isSuccess: Boolean = true)
+
+  sealed trait CollectionFormat
+
+  trait MergedArrayFormat extends CollectionFormat {
+    def separator: String
+  }
+
+  case object CSV extends MergedArrayFormat {
+    override val separator = ","
+  }
+
+  case object TSV extends MergedArrayFormat {
+    override val separator = "\t"
+  }
+
+  case object SSV extends MergedArrayFormat {
+    override val separator = " "
+  }
+
+  case object PIPES extends MergedArrayFormat {
+    override val separator = "|"
+  }
+
+  case object MULTI extends CollectionFormat
+
+  case class ArrayValues(values: Seq[Any], format: CollectionFormat = CSV)
+
+  object ArrayValues {
+    def apply(values: Option[Seq[Any]], format: CollectionFormat): ArrayValues =
+      ArrayValues(values.getOrElse(Seq.empty), format)
+    def apply(values: Option[Seq[Any]]): ArrayValues = ArrayValues(values, CSV)
+  }
+
+  implicit class ParametersMapImprovements(val m: Map[String, Any]) {
+
+    private def urlEncode(v: Any) = URLEncoder.encode(String.valueOf(v), "utf-8").replaceAll("\\+", "%20")
+
+    private def formattedParams(tuple: (String, Any)): Seq[(String, Any)] = formattedParams(tuple._1, tuple._2)
+
+    private def formattedParams(name: String, value: Any): Seq[(String, Any)] = value match {
+      case arr: ArrayValues =>
+        arr.format match {
+        case MULTI => arr.values.flatMap(formattedParams(name, _))
+        case format: MergedArrayFormat => Seq((name, arr.values.mkString(format.separator)))
+      }
+      case None => Seq.empty
+      case Some(opt) =>
+        formattedParams(name, opt)
+      case s: Seq[Any] =>
+        formattedParams(name, ArrayValues(s))
+      case v: String => Seq((name, urlEncode(v)))
+      case NumericValue(v) => Seq((name, urlEncode(v)))
+      case f: File => Seq((name, f))
+      case m: ApiModel => Seq((name, m))
+    }
+
+    def asFormattedParamsList = m.toList.flatMap(formattedParams)
+
+    def asFormattedParams = m.flatMap(formattedParams)
+  }
+
+  def addCustomStatusCode(code: CustomStatusCode): Unit = addCustomStatusCode(code.value, code.reason, code.isSuccess)
+  def addCustomStatusCode(code: Int, reason: String = "Application defined code", isSuccess: Boolean = true) = {
+    if (StatusCodes.getForKey(code).isEmpty)
+      StatusCodes.registerCustom(code, reason, reason, isSuccess, allowsEntity = true)
+  }
+
 }
 
-class ApiInvoker(implicit system: ActorSystem) extends UntrustedSslContext with CustomContentTypes {
+case object EmptyContent
+
+case class ApiError(code: Int, message: String) extends Throwable(message)
+
+case class ApiResponse[T](code: Int, content: T, headers: Map[String, String] = Map.empty)
+
+case class ApiEmptyResponse(code: Int, headers: Map[String, String] = Map.empty)
+
+
+class ApiInvoker(implicit system: ActorSystem) extends UntrustedSslContext with CustomContentTypes with JsonUnmarshalling {
+
+  import io.swagger.client.core.ApiInvoker._
 
   implicit val ec = system.dispatcher
+  implicit val defaultFormats = formats
 
   def settings = ApiSettings(system)
 
@@ -43,63 +139,136 @@ class ApiInvoker(implicit system: ActorSystem) extends UntrustedSslContext with 
     Encoder.DefaultFilter &&
     minEntitySize(settings.compressionSizeThreshold)
 
-  def escape(value: String): String = URLEncoder.encode(value, "utf-8").replaceAll("\\+", "%20")
+  settings.customCodes.foreach(addCustomStatusCode)
 
-  def auth(credentials: Option[HttpCredentials]): pipelining.RequestTransformer =
+
+  private def addAuthentication(credentials: Option[HttpCredentials]): pipelining.RequestTransformer =
     request => credentials.map(request ~> addCredentials(_)) getOrElse request
 
+  private def addHeaders(headers: Map[String, Any]): pipelining.RequestTransformer = { request =>
 
-  def execute(basePath: String, r: ApiRequest) = {
+    val rawHeaders = for {
+      (name, value) <- headers.asFormattedParams
+      header = RawHeader(name, String.valueOf(value))
+    } yield header
+    request.withHeaders(rawHeaders.toList)
+  }
 
-    implicit val timeout: Timeout = settings.connectionTimeout
-    val uri = r.uri(basePath)
-    val connector = HostConnectorSetup(uri.authority.host.toString, uri.effectivePort, sslEncryption = "https".equals(uri.scheme))
+  private def bodyPart(name: String, value: Any): BodyPart = {
+    value match {
+      case f: File =>
+        BodyPart(f, name)
+      case v: String =>
+        BodyPart(HttpEntity(String.valueOf(v)))
+      case NumericValue(v) =>
+        BodyPart(HttpEntity(String.valueOf(v)))
+      case m: ApiModel =>
+        BodyPart(HttpEntity(Serialization.write(m)))
+    }
+  }
 
-    val formData = r.formParams
-      .filter(k => k._2 != null)
-      .map(k => escape(k._1) + "=" + escape(k._2))
-      .mkString("", "&", "")
+  private def formDataContent(request: ApiRequest) = {
+    val params = request.formParams.asFormattedParams
+    if (params.isEmpty)
+      None
+    else
+      Some(
+        normalizedContentType(request.contentType).mediaType match {
+          case MediaTypes.`multipart/form-data` =>
+            MultipartFormData(params.map { case (name, value) => (name, bodyPart(name, value))})
+          case MediaTypes.`application/x-www-form-urlencoded` =>
+            FormData(params.mapValues(String.valueOf))
+          case m: MediaType => // Default : application/x-www-form-urlencoded.
+            FormData(params.mapValues(String.valueOf))
+        }
+      )
+  }
 
-    val entity = HttpEntity.apply(formalizeContentType(r.contentType), formData)
+  private def bodyContent(request: ApiRequest): Option[Any] = {
+    request.bodyParam.map(Extraction.decompose).map(compact)
+  }
 
-    val request = HttpRequest(r.method, uri, r.headers, entity) ~>
-      auth(r.credentials) ~>
-      encode(Gzip(CompressionFilter))
+  private def createRequest(uri: Uri, request: ApiRequest): HttpRequest = {
+    val builder = new RequestBuilder(request.method)
 
-    for {
-      Http.HostConnectorInfo(hostConnector, _) <- IO(Http) ? connector
-      response <- hostConnector.ask(request).mapTo[HttpResponse]
-    } yield {
-      response
+    val httpRequest = request.method match {
+      case HttpMethods.GET | HttpMethods.DELETE => builder.apply(uri)
+      case HttpMethods.POST | HttpMethods.PUT =>
+        formDataContent(request) orElse bodyContent(request) match {
+          case Some(c: FormData) =>
+            builder.apply(uri, c)
+          case Some(c: MultipartFormData) =>
+            builder.apply(uri, c)
+          case Some(c: String) =>
+            builder.apply(uri, HttpEntity(normalizedContentType(request.contentType), c))
+          case _ =>
+            builder.apply(uri, HttpEntity(normalizedContentType(request.contentType), " "))
+        }
+      case _ => builder.apply(uri)
     }
 
+    httpRequest ~>
+      addHeaders(request.headerParams) ~>
+      addAuthentication(request.credentials) ~>
+      encode(Gzip(CompressionFilter))
+  }
+
+  def makeQuery(r: ApiRequest): Query = {
+    r.queryParams
+      .asFormattedParams
+      .mapValues(String.valueOf)
+      .foldRight[Query](Uri.Query.Empty) {
+      case ((name, value), acc) => acc.+:(name, value)
+    }
+  }
+
+  def makeUri(r: ApiRequest): Uri = {
+    val opPath = r.operationPath.replaceAll("\\{format\\}", "json")
+    val opPathWithParams = r.pathParams.asFormattedParams
+      .mapValues(String.valueOf)
+      .foldLeft(opPath) {
+      case (path, (name, value)) => path.replaceAll(s"\\{$name\\}", value)
+    }
+    val query = makeQuery(r)
+
+    Uri(r.basePath + opPathWithParams).withQuery(query)
+  }
+
+  def execute(r: ApiRequest) = {
+
+    try {
+      implicit val timeout: Timeout = settings.connectionTimeout
+
+      val uri = makeUri(r)
+
+      val connector = HostConnectorSetup(
+        uri.authority.host.toString,
+        uri.effectivePort,
+        sslEncryption = "https".equals(uri.scheme),
+        defaultHeaders = settings.defaultHeaders ++ List(`Accept-Encoding`(gzip, deflate)))
+
+      val request = createRequest(uri, r)
+      System.out.println("# Request : " + request)
+
+      for {
+        Http.HostConnectorInfo(hostConnector, _) <- IO(Http) ? connector
+        response <- hostConnector.ask(request).mapTo[HttpResponse]
+      } yield {
+        response ~> decode(Deflate) ~> decode(Gzip)
+      }
+    }
+    catch {
+      // TODO mettre un truc plus joli ici...
+      case x: Throwable => Future.failed(x)
+    }
   }
 }
 
 trait JsonUnmarshalling {
 
-  implicit val formats = DefaultFormats ++ ApiSerializers.all
+  implicit val formats = DefaultFormats ++ JodaTimeSerializers.all
 
-  protected object ApiSerializers {
-    def all = List[Serializer[_]](DateTimeSerializer)
-  }
-
-  protected case object DateTimeSerializer extends CustomSerializer[DateTime](format => ( {
-    case JString(s) =>
-      ISODateTimeFormat.dateTimeParser().parseDateTime(s)
-  }, {
-    case d: DateTime =>
-      JString(ISODateTimeFormat.dateTimeParser().print(d))
-  }))
-
-
-  protected def registerStatusCode(statusCode: Int, detail: String = "", error: Boolean = false) = {
-    StatusCodes.getForKey(statusCode) match {
-      case None => StatusCodes.registerCustom(statusCode, detail, detail, error, true)
-      case Some(status) => status
-    }
-  }
-
+  // TODO encore utilisé ?
   protected def durationValue(response: HttpResponse): Option[Float] =
     response.headers.find(_.name equalsIgnoreCase "x-duration").map(_.value.toFloat)
 
@@ -111,36 +280,21 @@ trait JsonUnmarshalling {
           .extract[T]
     }
 
-  def extractFromJsonResponse[T: FromResponseUnmarshaller](response: HttpResponse): T = {
+  def extractFromJsonResponse[T: FromResponseUnmarshaller](response: HttpResponse)(implicit m: Manifest[T]): T = {
     response.as[T] match {
       case Right(value) ⇒ value
       case Left(error) ⇒
-        throw new ApiError(s"$error. Received : (${response.status}) ${response.entity.toString}", null, durationValue(response))
+        throw new ApiError(response.status.intValue,
+          s"$error - Expected: ${m.runtimeClass.getName} data. Content : "
+            + (if (response.entity.toString.length > 500) response.entity.toString.take(500) + "..." else response.entity.toString))
     }
-  }
-
-}
-
-object ApiUtils {
-
-  // Can be completed for specific string encoding, i.e dates
-  object Mappable {
-
-    implicit class MapOps[A, B](val m: Map[String, String]) extends AnyVal {
-      def add(k: String, a: AnyRef): Map[String, String] = a match {
-        case None => m
-        case Some(default) => m + (k -> default.toString)
-        case default => m + (k -> default.toString)
-      }
-    }
-
   }
 
 }
 
 trait CustomContentTypes {
 
-  def formalizeContentType(original: String): ContentType =
+  def normalizedContentType(original: String): ContentType =
     MediaTypes.forExtension(original) map (ContentType(_)) getOrElse parseContentType(original)
 
   def parseContentType(contentType: String): ContentType = {

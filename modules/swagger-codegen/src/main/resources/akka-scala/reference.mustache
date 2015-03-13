@@ -9,11 +9,15 @@
 
         trust-certificates: true
 
-        connection-timeout: 5s
+        connection-timeout: {{defaultTimeout}}ms
 
         default-headers {
-            "userAgent": "{{artifactId}}"
+            "userAgent": "{{artifactId}}_{{artifactVersion}}"
         }
+
+        // let you define custom http status code, as in :
+        // { code: 601, reason: "some custom http status code", success: false }
+        custom-codes : []
     }
 }
 

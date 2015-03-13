@@ -805,6 +805,7 @@ public class DefaultCodegen {
         collectionFormat = qp.getCollectionFormat();
         CodegenProperty pr = fromProperty("inner", inner);
         p.baseType = pr.datatype;
+        p.isContainer = true;
         imports.add(pr.baseType);
       }
       else

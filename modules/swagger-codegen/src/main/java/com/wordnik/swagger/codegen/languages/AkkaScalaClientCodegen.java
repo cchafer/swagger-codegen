@@ -1,21 +1,17 @@
 package com.wordnik.swagger.codegen.languages;
 
 import com.google.common.base.CaseFormat;
-import com.wordnik.swagger.codegen.CodegenConfig;
-import com.wordnik.swagger.codegen.CodegenType;
-import com.wordnik.swagger.codegen.DefaultCodegen;
-import com.wordnik.swagger.codegen.SupportingFile;
+import com.wordnik.swagger.codegen.*;
 import com.wordnik.swagger.models.properties.*;
-import org.apache.commons.lang.WordUtils;
+import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.*;
 
 public class AkkaScalaClientCodegen extends DefaultCodegen implements CodegenConfig {
+  Logger LOGGER = LoggerFactory.getLogger(AkkaScalaClientCodegen.class);
 
   protected String mainPackage = "io.swagger.client";
 
@@ -26,10 +22,13 @@ public class AkkaScalaClientCodegen extends DefaultCodegen implements CodegenCon
   protected String sourceFolder = "src/main/scala";
   protected String resourcesFolder = "src/main/resources";
   protected String configKey = "apiRequest";
+  protected int defaultTimeoutInMs = 5000;
   protected String configKeyPath = mainPackage;
   protected String authScheme = "";
   protected boolean authPreemptive = false;
   protected boolean asyncHttpClient = !authScheme.isEmpty();
+  protected boolean registerNonStandardStatusCodes = true;
+
 
   public CodegenType getTag() {
     return CodegenType.CLIENT;
@@ -70,6 +69,7 @@ public class AkkaScalaClientCodegen extends DefaultCodegen implements CodegenCon
     additionalProperties.put("authPreemptive", authPreemptive);
     additionalProperties.put("configKey", configKey);
     additionalProperties.put("configKeyPath", configKeyPath);
+    additionalProperties.put("defaultTimeout", defaultTimeoutInMs);
 
     supportingFiles.add(new SupportingFile("pom.mustache", "", "pom.xml"));
     supportingFiles.add(new SupportingFile("reference.mustache", resourcesFolder, "reference.conf"));
@@ -80,6 +80,7 @@ public class AkkaScalaClientCodegen extends DefaultCodegen implements CodegenCon
     supportingFiles.add(new SupportingFile("apiSettings.mustache",
         (sourceFolder + File.separator + invokerPackage).replace(".", java.io.File.separator), "ApiSettings.scala"));
 
+    importMapping.remove("Seq");
     importMapping.remove("List");
     importMapping.remove("Set");
     importMapping.remove("Map");
@@ -89,7 +90,7 @@ public class AkkaScalaClientCodegen extends DefaultCodegen implements CodegenCon
 
     typeMapping = new HashMap<String, String>();
     typeMapping.put("enum", "NSString");
-    typeMapping.put("array", "List");
+    typeMapping.put("array", "Seq");
     typeMapping.put("set", "Set");
     typeMapping.put("boolean", "Boolean");
     typeMapping.put("string", "String");
@@ -115,10 +116,11 @@ public class AkkaScalaClientCodegen extends DefaultCodegen implements CodegenCon
             "Float",
             "Object",
             "List",
+            "Seq",
             "Map")
     );
     instantiationTypes.put("array", "ListBuffer");
-    instantiationTypes.put("map", "HashMap");
+    instantiationTypes.put("map", "Map");
   }
 
   @Override
@@ -133,6 +135,37 @@ public class AkkaScalaClientCodegen extends DefaultCodegen implements CodegenCon
 
   public String modelFileFolder() {
     return outputFolder + "/" + sourceFolder + "/" + modelPackage().replace('.', File.separatorChar);
+  }
+
+  @Override
+  public Map<String, Object> postProcessOperations(Map<String, Object> objs) {
+    if (registerNonStandardStatusCodes) {
+      try {
+        @SuppressWarnings("unchecked")
+        Map<String, ArrayList<CodegenOperation>> opsMap = (Map<String, ArrayList<CodegenOperation>>) objs.get("operations");
+        HashSet<Integer> unknownCodes = new HashSet<Integer>();
+        for (CodegenOperation operation : opsMap.get("operation")) {
+          for (CodegenResponse response : operation.responses) {
+            if ("default".equals(response.code))
+              continue;
+            try {
+              int code = Integer.parseInt(response.code);
+              if (code >= 600) {
+                unknownCodes.add(code);
+              }
+            } catch (NumberFormatException e) {
+              LOGGER.error("Status code is not an integer : response.code", e);
+            }
+          }
+        }
+        if (!unknownCodes.isEmpty()) {
+          additionalProperties.put("unknownStatusCodes", unknownCodes);
+        }
+      } catch (Exception e) {
+        LOGGER.error("Unable to find operations List", e);
+      }
+    }
+    return super.postProcessOperations(objs);
   }
 
   @Override
@@ -209,16 +242,20 @@ public class AkkaScalaClientCodegen extends DefaultCodegen implements CodegenCon
     else if (p instanceof MapProperty) {
       MapProperty ap = (MapProperty) p;
       String inner = getSwaggerType(ap.getAdditionalProperties());
-      return "new HashMap[String, " + inner + "]() ";
+      return "Map[String, " + inner + "].empty ";
     } else if (p instanceof ArrayProperty) {
       ArrayProperty ap = (ArrayProperty) p;
       String inner = getSwaggerType(ap.getItems());
-      return "new ListBuffer[" + inner + "]() ";
+      return "Seq[" + inner + "].empty ";
     } else
       return "null";
   }
 
-  private static String camelize(String input) {
-    return CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, input);
+  private String camelize(String value) {
+    String[] strings = StringUtils.split(value, "_");
+    for (int i = 1; i < strings.length; i++) {
+      strings[i] = StringUtils.capitalize(strings[i]);
+    }
+    return StringUtils.join(strings);
   }
 }
