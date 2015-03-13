@@ -46,7 +46,7 @@ You can build a client against the swagger sample [petstore](http://petstore.swa
 This will run the generator with this command:
 
 ```
-java -jar modules/swagger-codegen-distribution/target/swagger-codegen-distribution-2.1.0-M1.jar \
+java -jar modules/swagger-codegen-distribution/target/swagger-codegen-distribution-2.1.3-M1-SNAPSHOT.jar \
   -i http://petstore.swagger.io/v2/swagger.json \
   -l java \
   -o samples/client/petstore/java
@@ -160,7 +160,7 @@ public class MyObjcCodegen extends ObjcClientCodegen {
 and specify the `classname` when running the generator:
 
 ```
--i com.mycompany.swagger.codegen.MyObjcCodegen
+-l com.mycompany.swagger.codegen.MyObjcCodegen
 ```
 
 Your subclass will now be loaded and overrides the `PREFIX` value in the superclass.
@@ -200,7 +200,7 @@ You can also use the codegen to generate a server for a couple different framewo
 
 ### node.js
 ```
-java -jar modules/swagger-codegen-distribution/target/swagger-codegen-distribution-2.1.0-M1.jar \
+java -jar modules/swagger-codegen-distribution/target/swagger-codegen-distribution-2.1.3-M1-SNAPSHOT.jar \
   -i http://petstore.swagger.io/v2/swagger.json \
   -l nodejs \
   -o samples/server/petstore/nodejs
@@ -212,7 +212,7 @@ java -jar modules/swagger-codegen-distribution/target/swagger-codegen-distributi
 
 ### scala scalatra
 ```
-java -jar modules/swagger-codegen-distribution/target/swagger-codegen-distribution-2.1.0-M1.jar \
+java -jar modules/swagger-codegen-distribution/target/swagger-codegen-distribution-2.1.3-M1-SNAPSHOT.jar \
   -i http://petstore.swagger.io/v2/swagger.json \
   -l scalatra \
   -o samples/server/petstore/scalatra
@@ -221,7 +221,7 @@ java -jar modules/swagger-codegen-distribution/target/swagger-codegen-distributi
 ### java jax-rs
 
 ```
-java -jar modules/swagger-codegen-distribution/target/swagger-codegen-distribution-2.1.0-M1.jar \
+java -jar modules/swagger-codegen-distribution/target/swagger-codegen-distribution-2.1.3-M1-SNAPSHOT.jar \
   -i http://petstore.swagger.io/v2/swagger.json \
   -l jaxrs \
   -o samples/server/petstore/jaxrs
