@@ -19,13 +19,13 @@ case class ApiRequest(
                        pathParams: Map[String, Any] = Map.empty,
                        queryParams: Map[String, Any] = Map.empty,
                        headerParams: Map[String, Any] = Map.empty,
-                       credentials: Option[HttpCredentials] = None) {
+                       credentials: Credentials = NoCredentials) {
 
-  def withoutCredentials = copy(credentials = None)
+  def withCredentials(cred: Credentials) = copy(credentials = cred)
 
-  def withCredentials(cred: HttpCredentials) = copy(credentials = Some(cred))
+  def withPassword(user: String, password: String) = withCredentials(BasicCredentials(user, password))
 
-  def withPassword(user: String, password: String) = copy(credentials = Some(BasicHttpCredentials(user, password)))
+  def withApiKey(key: ApiKeyValue, keyName: String, location: ApiKeyLocation) = withCredentials(ApiKeyCredentials(key, keyName, location))
 
   def withResponse[T](code: Int, responseClass: Option[Class[T]]) = copy(responses = responses + (code -> responseClass))
 

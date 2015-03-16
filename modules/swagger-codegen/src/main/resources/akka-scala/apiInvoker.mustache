@@ -40,7 +40,7 @@ object ApiInvoker {
 
   object NumericValue {
     def unapply(n: Any): Option[NumericValue] = n match {
-      case (_:Int | _:Long | _:Float | _:Double | _:Boolean | _:Byte) => Some(NumericValue(String.valueOf(n)))
+      case (_: Int | _: Long | _: Float | _: Double | _: Boolean | _: Byte) => Some(NumericValue(String.valueOf(n)))
       case _ => None
     }
   }
@@ -76,6 +76,7 @@ object ApiInvoker {
   object ArrayValues {
     def apply(values: Option[Seq[Any]], format: CollectionFormat): ArrayValues =
       ArrayValues(values.getOrElse(Seq.empty), format)
+
     def apply(values: Option[Seq[Any]]): ArrayValues = ArrayValues(values, CSV)
   }
 
@@ -88,9 +89,9 @@ object ApiInvoker {
     private def formattedParams(name: String, value: Any): Seq[(String, Any)] = value match {
       case arr: ArrayValues =>
         arr.format match {
-        case MULTI => arr.values.flatMap(formattedParams(name, _))
-        case format: MergedArrayFormat => Seq((name, arr.values.mkString(format.separator)))
-      }
+          case MULTI => arr.values.flatMap(formattedParams(name, _))
+          case format: MergedArrayFormat => Seq((name, arr.values.mkString(format.separator)))
+        }
       case None => Seq.empty
       case Some(opt) =>
         formattedParams(name, opt)
@@ -108,6 +109,7 @@ object ApiInvoker {
   }
 
   def addCustomStatusCode(code: CustomStatusCode): Unit = addCustomStatusCode(code.value, code.reason, code.isSuccess)
+
   def addCustomStatusCode(code: Int, reason: String = "Application defined code", isSuccess: Boolean = true) = {
     if (StatusCodes.getForKey(code).isEmpty)
       StatusCodes.registerCustom(code, reason, reason, isSuccess, allowsEntity = true)
@@ -115,13 +117,40 @@ object ApiInvoker {
 
 }
 
+sealed trait Credentials {
+  def asQueryParam: Option[(String, String)] = None
+}
+
+sealed trait ApiKeyLocation
+
+object ApiKeyLocations {
+
+  case object Query extends ApiKeyLocation
+
+  case object Headers extends ApiKeyLocation
+
+}
+
+case object NoCredentials extends Credentials
+
+sealed case class ApiKeyValue(value: String)
+
+sealed case class ApiKeyCredentials(key: ApiKeyValue, keyName: String, location: ApiKeyLocation) extends Credentials {
+  override def asQueryParam: Option[(String, String)] = location match {
+    case ApiKeyLocations.Query => Some((keyName, key.value))
+    case _ => None
+  }
+}
+
+sealed case class BasicCredentials(user: String, password: String) extends Credentials
+
 case object EmptyContent
 
-case class ApiError(code: Int, message: String) extends Throwable(message)
+sealed case class ApiError(code: Int, message: String) extends Throwable(message)
 
-case class ApiResponse[T](code: Int, content: T, headers: Map[String, String] = Map.empty)
+sealed case class ApiResponse[T](code: Int, content: T, headers: Map[String, String] = Map.empty)
 
-case class ApiEmptyResponse(code: Int, headers: Map[String, String] = Map.empty)
+sealed case class ApiEmptyResponse(code: Int, headers: Map[String, String] = Map.empty)
 
 
 class ApiInvoker(implicit system: ActorSystem) extends UntrustedSslContext with CustomContentTypes with JsonUnmarshalling {
@@ -141,9 +170,17 @@ class ApiInvoker(implicit system: ActorSystem) extends UntrustedSslContext with 
 
   settings.customCodes.foreach(addCustomStatusCode)
 
+  private def addAuthentication(credentials: Credentials): pipelining.RequestTransformer =
+    request =>
+      credentials match {
+        case BasicCredentials(login, password) =>
+          request ~> addCredentials(BasicHttpCredentials(login, password))
 
-  private def addAuthentication(credentials: Option[HttpCredentials]): pipelining.RequestTransformer =
-    request => credentials.map(request ~> addCredentials(_)) getOrElse request
+        case ApiKeyCredentials(keyValue, keyName, ApiKeyLocations.Headers) =>
+          request ~> addHeader(RawHeader(keyName, keyValue.value))
+
+        case _ => request
+      }
 
   private def addHeaders(headers: Map[String, Any]): pipelining.RequestTransformer = { request =>
 
@@ -151,6 +188,7 @@ class ApiInvoker(implicit system: ActorSystem) extends UntrustedSslContext with 
       (name, value) <- headers.asFormattedParams
       header = RawHeader(name, String.valueOf(value))
     } yield header
+
     request.withHeaders(rawHeaders.toList)
   }
 
@@ -214,7 +252,7 @@ class ApiInvoker(implicit system: ActorSystem) extends UntrustedSslContext with 
   }
 
   def makeQuery(r: ApiRequest): Query = {
-    r.queryParams
+    (r.queryParams ++ r.credentials.asQueryParam)
       .asFormattedParams
       .mapValues(String.valueOf)
       .foldRight[Query](Uri.Query.Empty) {

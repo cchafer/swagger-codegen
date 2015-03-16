@@ -1,16 +1,15 @@
 package com.wordnik.swagger.codegen;
 
-import com.sun.xml.internal.bind.v2.runtime.output.SAXOutput;
+import com.samskivert.mustache.Mustache;
+import com.samskivert.mustache.Template;
 import com.wordnik.swagger.models.*;
 import com.wordnik.swagger.models.auth.SecuritySchemeDefinition;
-import com.wordnik.swagger.util.*;
-import com.samskivert.mustache.*;
-
+import com.wordnik.swagger.util.Json;
 import org.apache.commons.io.FileUtils;
 
+import java.io.File;
+import java.io.Reader;
 import java.util.*;
-import java.util.regex.*;
-import java.io.*;
 
 public class DefaultGenerator extends AbstractGenerator implements Generator {
   protected CodegenConfig config;

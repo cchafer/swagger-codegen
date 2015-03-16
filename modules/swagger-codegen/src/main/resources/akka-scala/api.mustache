@@ -9,6 +9,8 @@ import spray.http._
 object {{classname}} {
 
 {{#operation}}
+    // {{#authMethods}}Method : {{name}} {{type}}
+    {{/authMethods}}
   def {{operationId}}({{#allParams}}{{paramName}}: {{#required}}{{dataType}}{{/required}}{{^required}}{{#isContainer}}{{dataType}}{{/isContainer}}{{^isContainer}}Option[{{dataType}}]{{/isContainer}}{{/required}}{{#defaultValue}} = {{{defaultValue}}}{{/defaultValue}}{{^defalutValue}}{{^required}}{{^isContainer}} = None{{/isContainer}}{{/required}}{{/defalutValue}}{{#hasMore}}, {{/hasMore}}{{/allParams}}) =
     ApiRequest(HttpMethods.{{httpMethod.toUpperCase}}, "{{basePath}}", "{{path}}", {{#consumes.0}}"{{mediaType}}"{{/consumes.0}}{{^consumes}}"application/json"{{/consumes}})
       {{#bodyParam}}.withBody({{paramName}})
