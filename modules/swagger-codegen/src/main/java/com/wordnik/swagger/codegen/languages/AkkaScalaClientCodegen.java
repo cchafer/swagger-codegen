@@ -28,6 +28,7 @@ public class AkkaScalaClientCodegen extends DefaultCodegen implements CodegenCon
   protected boolean authPreemptive = false;
   protected boolean asyncHttpClient = !authScheme.isEmpty();
   protected boolean registerNonStandardStatusCodes = true;
+  protected boolean renderJavadoc = true;
 
 
   public CodegenType getTag() {
@@ -70,6 +71,7 @@ public class AkkaScalaClientCodegen extends DefaultCodegen implements CodegenCon
     additionalProperties.put("configKey", configKey);
     additionalProperties.put("configKeyPath", configKeyPath);
     additionalProperties.put("defaultTimeout", defaultTimeoutInMs);
+    additionalProperties.put("renderJavaDoc", renderJavadoc);
 
     supportingFiles.add(new SupportingFile("pom.mustache", "", "pom.xml"));
     supportingFiles.add(new SupportingFile("reference.mustache", resourcesFolder, "reference.conf"));

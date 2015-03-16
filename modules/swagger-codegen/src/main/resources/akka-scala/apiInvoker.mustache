@@ -125,9 +125,9 @@ sealed trait ApiKeyLocation
 
 object ApiKeyLocations {
 
-  case object Query extends ApiKeyLocation
+  case object QUERY extends ApiKeyLocation
 
-  case object Headers extends ApiKeyLocation
+  case object HEADER extends ApiKeyLocation
 
 }
 
@@ -137,7 +137,7 @@ sealed case class ApiKeyValue(value: String)
 
 sealed case class ApiKeyCredentials(key: ApiKeyValue, keyName: String, location: ApiKeyLocation) extends Credentials {
   override def asQueryParam: Option[(String, String)] = location match {
-    case ApiKeyLocations.Query => Some((keyName, key.value))
+    case ApiKeyLocations.QUERY => Some((keyName, key.value))
     case _ => None
   }
 }
@@ -170,16 +170,14 @@ class ApiInvoker(implicit system: ActorSystem) extends UntrustedSslContext with 
 
   settings.customCodes.foreach(addCustomStatusCode)
 
-  private def addAuthentication(credentials: Credentials): pipelining.RequestTransformer =
+  private def addAuthentication(credentialsSeq: Seq[Credentials]): pipelining.RequestTransformer =
     request =>
-      credentials match {
-        case BasicCredentials(login, password) =>
-          request ~> addCredentials(BasicHttpCredentials(login, password))
-
-        case ApiKeyCredentials(keyValue, keyName, ApiKeyLocations.Headers) =>
-          request ~> addHeader(RawHeader(keyName, keyValue.value))
-
-        case _ => request
+      credentialsSeq.foldLeft(request) {
+        case (req, BasicCredentials(login, password)) =>
+          req ~> addCredentials(BasicHttpCredentials(login, password))
+        case (req, ApiKeyCredentials(keyValue, keyName, ApiKeyLocations.HEADER)) =>
+          req ~> addHeader(RawHeader(keyName, keyValue.value))
+        case (req, _) => req
       }
 
   private def addHeaders(headers: Map[String, Any]): pipelining.RequestTransformer = { request =>
@@ -252,8 +250,11 @@ class ApiInvoker(implicit system: ActorSystem) extends UntrustedSslContext with 
   }
 
   def makeQuery(r: ApiRequest): Query = {
-    (r.queryParams ++ r.credentials.asQueryParam)
-      .asFormattedParams
+    r.credentials.foldLeft(r.queryParams) {
+      case (params, ApiKeyCredentials(key, keyName, ApiKeyLocations.QUERY)) =>
+        params + (keyName -> key.value)
+      case (params, _) => params
+    }.asFormattedParams
       .mapValues(String.valueOf)
       .foldRight[Query](Uri.Query.Empty) {
       case ((name, value), acc) => acc.+:(name, value)

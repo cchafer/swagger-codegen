@@ -1,29 +1,39 @@
 package {{package}}
+
 {{#imports}}import {{import}}
 {{/imports}}
 import {{invokerPackage}}._
 import {{invokerPackage}}.ApiInvoker._
+import {{invokerPackage}}.ApiKeyLocations._
 import spray.http._
 
 {{#operations}}
 object {{classname}} {
 
 {{#operation}}
-    // {{#authMethods}}Method : {{name}} {{type}}
-    {{/authMethods}}
-  def {{operationId}}({{#allParams}}{{paramName}}: {{#required}}{{dataType}}{{/required}}{{^required}}{{#isContainer}}{{dataType}}{{/isContainer}}{{^isContainer}}Option[{{dataType}}]{{/isContainer}}{{/required}}{{#defaultValue}} = {{{defaultValue}}}{{/defaultValue}}{{^defalutValue}}{{^required}}{{^isContainer}} = None{{/isContainer}}{{/required}}{{/defalutValue}}{{#hasMore}}, {{/hasMore}}{{/allParams}}) =
-    ApiRequest(HttpMethods.{{httpMethod.toUpperCase}}, "{{basePath}}", "{{path}}", {{#consumes.0}}"{{mediaType}}"{{/consumes.0}}{{^consumes}}"application/json"{{/consumes}})
-      {{#bodyParam}}.withBody({{paramName}})
-      {{/bodyParam}}{{#formParams}}.withFormParam("{{baseName}}", {{#isContainer}}ArrayValues({{paramName}}{{#collectionFormat}}, {{collectionFormat.toUpperCase}}{{/collectionFormat}}){{/isContainer}}{{^isContainer}}{{paramName}}{{/isContainer}})
-      {{/formParams}}{{#queryParams}}.withQueryParam("{{baseName}}", {{#isContainer}}ArrayValues({{paramName}}{{#collectionFormat}}, {{collectionFormat.toUpperCase}}{{/collectionFormat}}){{/isContainer}}{{^isContainer}}{{paramName}}{{/isContainer}})
-      {{/queryParams}}{{#pathParams}}.withPathParam("{{baseName}}", {{#isContainer}}ArrayValues({{paramName}}{{#collectionFormat}}, {{collectionFormat.toUpperCase}}{{/collectionFormat}}){{/isContainer}}{{^isContainer}}{{paramName}}{{/isContainer}})
-      {{/pathParams}}{{#headerParams}}.withHeaderParam("{{baseName}}", {{#isContainer}}ArrayValues({{paramName}}{{#collectionFormat}}, {{collectionFormat.toUpperCaseapiIn}}{{/collectionFormat}}){{/isContainer}}{{^isContainer}}{{paramName}}{{/isContainer}})
-      {{/headerParams}}{{#responses}}{{^isWildcard}}{{#dataType}}.withResponse({{code}}, Some(classOf[{{dataType}}]))
-      {{/dataType}}{{^dataType}}.withResponse({{code}}, None)
-      {{/dataType}}{{/isWildcard}}{{/responses}}{{#responses}}{{#isWildcard}}{{#dataType}}.withDefaultResponse({{code}}, Some(classOf[{{dataType}}]))
-      {{/dataType}}{{^dataType}}.withDefaultResponse(None)
-      {{/dataType}}{{/isWildcard}}{{/responses}}
+    {{#renderJavaDoc}}/**
+      {{notes}}
 
+      Expected answers: {{#responses}}
+        code {{code}} : {{dataType}} {{^message.isEmpty}}({{message}}){{/message.isEmpty}}{{/responses}}
+      {{#authMethods.0}}Available security schemes:
+      {{#authMethods}}  {{name}} ({{type}})
+      {{/authMethods}}{{/authMethods.0}}{{#allParams}}
+      @param {{paramName}} {{description}}{{/allParams}}
+    */{{/renderJavaDoc}}
+    def {{operationId}}({{>methodParameters}}): ApiRequest =
+        ApiRequest(HttpMethods.{{httpMethod.toUpperCase}}, "{{basePath}}", "{{path}}", {{#consumes.0}}"{{mediaType}}"{{/consumes.0}}{{^consumes}}"application/json"{{/consumes}})
+          {{#authMethods}}{{#isApiKey}}.withApiKey(apiKey, "{{keyParamName}}", {{#isKeyInQuery}}QUERY{{/isKeyInQuery}}{{#isKeyInHeader}}HEADER{{/isKeyInHeader}}){{/isApiKey}}{{#isBasic}}.withBasicAuth(basicAuth){{/isBasic}}
+          {{/authMethods}}{{#bodyParam}}.withBody({{paramName}})
+          {{/bodyParam}}{{#formParams}}.withFormParam({{>paramCreation}})
+          {{/formParams}}{{#queryParams}}.withQueryParam({{>paramCreation}})
+          {{/queryParams}}{{#pathParams}}.withPathParam({{>paramCreation}})
+          {{/pathParams}}{{#headerParams}}.withHeaderParam({{>paramCreation}})
+          {{/headerParams}}{{#responses}}{{^isWildcard}}{{#dataType}}.withResponse({{code}}, Some(classOf[{{dataType}}]))
+          {{/dataType}}{{^dataType}}.withResponse({{code}}, None)
+          {{/dataType}}{{/isWildcard}}{{/responses}}{{#responses}}{{#isWildcard}}{{#dataType}}.withDefaultResponse({{code}}, Some(classOf[{{dataType}}]))
+          {{/dataType}}{{^dataType}}.withDefaultResponse(None)
+          {{/dataType}}{{/isWildcard}}{{/responses}}
 {{/operation}}
 
 {{#unknownStatusCodes}}

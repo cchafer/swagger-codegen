@@ -112,7 +112,7 @@
             "schema": {"$ref": "#\/definitions\/HaapiException"}
           }
         },
-        "security": [{"AuthPassword": []}],
+        "security": [{"AuthPassword": []}, {"AuthAnkamaApiKey": []}],
         "tags": ["Account"]
       }
     },
