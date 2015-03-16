@@ -12,19 +12,20 @@ object {{classname}} {
 
 {{#operation}}
     {{#renderJavaDoc}}/**
-      {{notes}}
+    {{^notes.isEmpty}}   {{notes}}
 
-      Expected answers: {{#responses}}
-        code {{code}} : {{dataType}} {{^message.isEmpty}}({{message}}){{/message.isEmpty}}{{/responses}}
-      {{#authMethods.0}}Available security schemes:
-      {{#authMethods}}  {{name}} ({{type}})
-      {{/authMethods}}{{/authMethods.0}}{{#allParams}}
+    {{/notes.isEmpty}}   Expected answers: {{#responses}}
+          code {{code}} : {{dataType}} {{^message.isEmpty}}({{message}}){{/message.isEmpty}}{{/responses}}
+       {{#authMethods.0}}Available security schemes:
+       {{#authMethods}}   {{name}} ({{type}})
+       {{/authMethods}}{{/authMethods.0}}{{#allParams}}
       @param {{paramName}} {{description}}{{/allParams}}
     */{{/renderJavaDoc}}
     def {{operationId}}({{>methodParameters}}): ApiRequest =
         ApiRequest(HttpMethods.{{httpMethod.toUpperCase}}, "{{basePath}}", "{{path}}", {{#consumes.0}}"{{mediaType}}"{{/consumes.0}}{{^consumes}}"application/json"{{/consumes}})
-          {{#authMethods}}{{#isApiKey}}.withApiKey(apiKey, "{{keyParamName}}", {{#isKeyInQuery}}QUERY{{/isKeyInQuery}}{{#isKeyInHeader}}HEADER{{/isKeyInHeader}}){{/isApiKey}}{{#isBasic}}.withBasicAuth(basicAuth){{/isBasic}}
-          {{/authMethods}}{{#bodyParam}}.withBody({{paramName}})
+          {{#authMethods}}{{#isApiKey}}.withApiKey(apiKey, "{{keyParamName}}", {{#isKeyInQuery}}QUERY{{/isKeyInQuery}}{{#isKeyInHeader}}HEADER{{/isKeyInHeader}})
+          {{/isApiKey}}{{#isBasic}}.withBasicAuth(basicAuth)
+          {{/isBasic}}{{/authMethods}}{{#bodyParam}}.withBody({{paramName}})
           {{/bodyParam}}{{#formParams}}.withFormParam({{>paramCreation}})
           {{/formParams}}{{#queryParams}}.withQueryParam({{>paramCreation}})
           {{/queryParams}}{{#pathParams}}.withPathParam({{>paramCreation}})

@@ -21,7 +21,7 @@ case class ApiRequest(
                        headerParams: Map[String, Any] = Map.empty,
                        credentials: Seq[Credentials] = List.empty) {
 
-  def withCredentials(cred: Credentials) = copy(credentials = cred)
+  def withCredentials(cred: Credentials) = copy(credentials = credentials :+ cred)
 
   def withBasicAuth(auth: Option[Credentials]) = auth match {
     case Some(credentials: Credentials) => withCredentials(credentials)
