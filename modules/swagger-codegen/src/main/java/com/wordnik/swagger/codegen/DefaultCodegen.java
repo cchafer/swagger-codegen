@@ -402,7 +402,14 @@ public class DefaultCodegen {
             LOGGER.warn("null property for " + key);
           }
           else {
-            CodegenProperty cp = fromProperty(key, prop);
+            CodegenProperty cp;
+            try{
+              cp = fromProperty(key, prop);
+            }
+            catch(Exception e) {
+              System.out.println("failed to process model " + name);
+              throw new RuntimeException(e);
+            }
             cp.required = false;
             if(impl.getRequired() != null) {
               for(String req : impl.getRequired()) {
@@ -444,18 +451,19 @@ public class DefaultCodegen {
     return m;
   }
 
-    public static String getterAndSetterCapitalize(String name) {
-        if (name == null || name.length() == 0) {
-            return name;
-        }
-        if (name.length() > 1 && Character.isUpperCase(name.charAt(1)) &&
-                Character.isLowerCase(name.charAt(0))){
-            return name;
-        }
-        char chars[] = name.toCharArray();
-        chars[0] = Character.toUpperCase(chars[0]);
-        return new String(chars);
+  public String getterAndSetterCapitalize(String name) {
+    if (name == null || name.length() == 0) {
+      return name;
     }
+    name = toVarName(name);
+    if (name.length() > 1 && Character.isUpperCase(name.charAt(1)) &&
+            Character.isLowerCase(name.charAt(0))){
+      return name;
+    }
+    char chars[] = name.toCharArray();
+    chars[0] = Character.toUpperCase(chars[0]);
+    return new String(chars);
+  }
 
   public CodegenProperty fromProperty(String name, Property p) {
     if(p == null) {
