@@ -23,15 +23,7 @@ case class ApiRequest(
 
   def withCredentials(cred: Credentials) = copy(credentials = credentials :+ cred)
 
-  def withBasicAuth(auth: Option[Credentials]) = auth match {
-    case Some(credentials: Credentials) => withCredentials(credentials)
-    case None => this
-  }
-
-  def withApiKey(key: Option[ApiKeyValue], keyName: String, location: ApiKeyLocation) = key match {
-    case Some(keyValue) => withCredentials(ApiKeyCredentials(keyValue, keyName, location))
-    case None => this
-  }
+  def withApiKey(key: ApiKeyValue, keyName: String, location: ApiKeyLocation) = withCredentials(ApiKeyCredentials(key, keyName, location))
 
   def withResponse[T](code: Int, responseClass: Option[Class[T]]) = copy(responses = responses + (code -> responseClass))
 

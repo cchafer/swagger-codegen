@@ -9,10 +9,14 @@ import akka.actor.ActorSystem
 import akka.io.IO
 import akka.pattern.ask
 import akka.util.Timeout
+import io.swagger.client.model.Account
+import org.joda.time.DateTime
+import org.joda.time.format.ISODateTimeFormat
+import org.json4s.JsonAST.JString
 import org.json4s.ext.JodaTimeSerializers
 import org.json4s.jackson.JsonMethods._
 import org.json4s.jackson.Serialization
-import org.json4s.{DefaultFormats, Extraction}
+import org.json4s.{CustomSerializer, DefaultFormats, Extraction}
 import spray.can.Http
 import spray.can.Http.HostConnectorSetup
 import spray.client.pipelining
@@ -157,8 +161,18 @@ class ApiInvoker(implicit system: ActorSystem) extends UntrustedSslContext with 
 
   import io.swagger.client.core.ApiInvoker._
 
+  // TODO mettre ça ailleurs, et jarter le JsonExt vu qu'il sert qu'aux dates
+  case object DateTimeSerializer extends CustomSerializer[DateTime](format => (
+    {
+      case JString(s) =>
+        ISODateTimeFormat.dateTimeParser().parseDateTime(s)
+    }, {
+    case d: DateTime =>
+      JString(ISODateTimeFormat.dateTimeParser().print(d))
+  }))
+
   implicit val ec = system.dispatcher
-  implicit val defaultFormats = formats
+  implicit val formats = DefaultFormats + DateTimeSerializer
 
   def settings = ApiSettings(system)
 
@@ -273,6 +287,15 @@ class ApiInvoker(implicit system: ActorSystem) extends UntrustedSslContext with 
     Uri(r.basePath + opPathWithParams).withQuery(query)
   }
 
+  implicit def jsonableUnmarshaller[T](implicit mf: Manifest[T]): Unmarshaller[T] =
+    Unmarshaller[T](MediaTypes.`application/json`) {
+      case x: HttpEntity.NonEmpty ⇒
+        parse(x.asString(defaultCharset = HttpCharsets.`UTF-8`))
+          .camelizeKeys
+          .extract[T]
+    }
+
+
   def execute(r: ApiRequest) = {
 
     try {
@@ -286,6 +309,7 @@ class ApiInvoker(implicit system: ActorSystem) extends UntrustedSslContext with 
         sslEncryption = "https".equals(uri.scheme),
         defaultHeaders = settings.defaultHeaders ++ List(`Accept-Encoding`(gzip, deflate)))
 
+      // TODO jarter System.out
       val request = createRequest(uri, r)
       System.out.println("# Request : " + request)
 
@@ -293,31 +317,15 @@ class ApiInvoker(implicit system: ActorSystem) extends UntrustedSslContext with 
         Http.HostConnectorInfo(hostConnector, _) <- IO(Http) ? connector
         response <- hostConnector.ask(request).mapTo[HttpResponse]
       } yield {
-        response ~> decode(Deflate) ~> decode(Gzip)
+        response ~> decode(Deflate) ~> decode(Gzip) ~> extractFromJsonResponse[Account]
       }
+
     }
     catch {
       // TODO mettre un truc plus joli ici...
       case x: Throwable => Future.failed(x)
     }
   }
-}
-
-trait JsonUnmarshalling {
-
-  implicit val formats = DefaultFormats ++ JodaTimeSerializers.all
-
-  // TODO encore utilisé ?
-  protected def durationValue(response: HttpResponse): Option[Float] =
-    response.headers.find(_.name equalsIgnoreCase "x-duration").map(_.value.toFloat)
-
-  implicit def jsonableUnmarshaller[T](implicit mf: Manifest[T]): Unmarshaller[T] =
-    Unmarshaller[T](MediaTypes.`application/json`) {
-      case x: HttpEntity.NonEmpty ⇒
-        parse(x.asString(defaultCharset = HttpCharsets.`UTF-8`))
-          .camelizeKeys
-          .extract[T]
-    }
 
   def extractFromJsonResponse[T: FromResponseUnmarshaller](response: HttpResponse)(implicit m: Manifest[T]): T = {
     response.as[T] match {
@@ -328,6 +336,30 @@ trait JsonUnmarshalling {
             + (if (response.entity.toString.length > 500) response.entity.toString.take(500) + "..." else response.entity.toString))
     }
   }
+
+}
+
+trait JsonUnmarshalling {
+
+//  implicit val formats = DefaultFormats ++ JodaTimeSerializers.all
+//
+//  implicit def jsonableUnmarshaller[T](implicit mf: Manifest[T]): Unmarshaller[T] =
+//    Unmarshaller[T](MediaTypes.`application/json`) {
+//      case x: HttpEntity.NonEmpty ⇒
+//        parse(x.asString(defaultCharset = HttpCharsets.`UTF-8`))
+//          .camelizeKeys
+//          .extract[T]
+//    }
+//
+//  def extractFromJsonResponse[T: FromResponseUnmarshaller](response: HttpResponse)(implicit m: Manifest[T]): T = {
+//    response.as[T] match {
+//      case Right(value) ⇒ value
+//      case Left(error) ⇒
+//        throw new ApiError(response.status.intValue,
+//          s"$error - Expected: ${m.runtimeClass.getName} data. Content : "
+//            + (if (response.entity.toString.length > 500) response.entity.toString.take(500) + "..." else response.entity.toString))
+//    }
+//  }
 
 }
 
@@ -380,3 +412,4 @@ trait UntrustedSslContext {
         engine
     }
 }
+

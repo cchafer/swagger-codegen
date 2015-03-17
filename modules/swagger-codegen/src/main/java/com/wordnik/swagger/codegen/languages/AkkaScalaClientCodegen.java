@@ -1,13 +1,20 @@
 package com.wordnik.swagger.codegen.languages;
 
 import com.google.common.base.CaseFormat;
+import com.samskivert.mustache.Mustache;
+import com.samskivert.mustache.Template;
 import com.wordnik.swagger.codegen.*;
+import com.wordnik.swagger.models.Model;
+import com.wordnik.swagger.models.auth.SecuritySchemeDefinition;
 import com.wordnik.swagger.models.properties.*;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.StringWriter;
+import java.io.Writer;
 import java.util.*;
 
 public class AkkaScalaClientCodegen extends DefaultCodegen implements CodegenConfig {
@@ -29,6 +36,7 @@ public class AkkaScalaClientCodegen extends DefaultCodegen implements CodegenCon
   protected boolean asyncHttpClient = !authScheme.isEmpty();
   protected boolean registerNonStandardStatusCodes = true;
   protected boolean renderJavadoc = true;
+  protected boolean removeOAuthSecurities = true;
 
 
   public CodegenType getTag() {
@@ -71,7 +79,9 @@ public class AkkaScalaClientCodegen extends DefaultCodegen implements CodegenCon
     additionalProperties.put("configKey", configKey);
     additionalProperties.put("configKeyPath", configKeyPath);
     additionalProperties.put("defaultTimeout", defaultTimeoutInMs);
-    additionalProperties.put("renderJavaDoc", renderJavadoc);
+    if (renderJavadoc) {
+      additionalProperties.put("javadocRenderer", new JavadocLambda());
+    }
 
     supportingFiles.add(new SupportingFile("pom.mustache", "", "pom.xml"));
     supportingFiles.add(new SupportingFile("reference.mustache", resourcesFolder, "reference.conf"));
@@ -186,6 +196,31 @@ public class AkkaScalaClientCodegen extends DefaultCodegen implements CodegenCon
   }
 
   @Override
+  public List<CodegenSecurity> fromSecurity(Map<String, SecuritySchemeDefinition> schemes) {
+    final List<CodegenSecurity> codegenSecurities = super.fromSecurity(schemes);
+    if (!removeOAuthSecurities)
+      return codegenSecurities;
+
+    // Remove OAuth securities
+    Iterator<CodegenSecurity> it = codegenSecurities.iterator();
+    while (it.hasNext()) {
+      final CodegenSecurity security = it.next();
+      if (security.isOAuth)
+        it.remove();
+    }
+    // Adapt 'hasMore'
+    it = codegenSecurities.iterator();
+    while (it.hasNext()) {
+      final CodegenSecurity security = it.next();
+      security.hasMore = it.hasNext();
+    }
+
+    if (codegenSecurities.isEmpty())
+      return null;
+    return codegenSecurities;
+  }
+
+  @Override
   public String toOperationId(String operationId) {
     return super.toOperationId(CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_CAMEL, operationId));
   }
@@ -193,6 +228,11 @@ public class AkkaScalaClientCodegen extends DefaultCodegen implements CodegenCon
   @Override
   public String toParamName(String name) {
     return super.toParamName(camelize(name));
+  }
+
+  @Override
+  public String toVarName(String name) {
+    return super.toVarName(camelize(name));
   }
 
   @Override
@@ -233,6 +273,7 @@ public class AkkaScalaClientCodegen extends DefaultCodegen implements CodegenCon
       return "null";
     else if (p instanceof DateTimeProperty)
       return "null";
+
     else if (p instanceof DoubleProperty)
       return "null";
     else if (p instanceof FloatProperty)
@@ -259,5 +300,22 @@ public class AkkaScalaClientCodegen extends DefaultCodegen implements CodegenCon
       strings[i] = StringUtils.capitalize(strings[i]);
     }
     return StringUtils.join(strings);
+  }
+
+  private static class JavadocLambda implements Mustache.Lambda {
+    @Override
+    public void execute(Template.Fragment frag, Writer out) throws IOException {
+      final StringWriter tempWriter = new StringWriter();
+      frag.execute(tempWriter);
+      final String renderedFrag = tempWriter.toString();
+      final String[] lines = renderedFrag.split("\\r?\\n");
+      final StringBuilder sb = new StringBuilder();
+      sb.append("  /**\n");
+      for (String line : lines) {
+        sb.append("   * ").append(line).append("\n");
+      }
+      sb.append("   */\n");
+      out.write(sb.toString());
+    }
   }
 }
