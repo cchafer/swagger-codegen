@@ -4,7 +4,6 @@ import com.google.common.base.CaseFormat;
 import com.samskivert.mustache.Mustache;
 import com.samskivert.mustache.Template;
 import com.wordnik.swagger.codegen.*;
-import com.wordnik.swagger.models.Model;
 import com.wordnik.swagger.models.auth.SecuritySchemeDefinition;
 import com.wordnik.swagger.models.properties.*;
 import org.apache.commons.lang.StringUtils;
@@ -79,18 +78,15 @@ public class AkkaScalaClientCodegen extends DefaultCodegen implements CodegenCon
     additionalProperties.put("configKey", configKey);
     additionalProperties.put("configKeyPath", configKeyPath);
     additionalProperties.put("defaultTimeout", defaultTimeoutInMs);
-    if (renderJavadoc) {
+    if (renderJavadoc)
       additionalProperties.put("javadocRenderer", new JavadocLambda());
-    }
 
     supportingFiles.add(new SupportingFile("pom.mustache", "", "pom.xml"));
     supportingFiles.add(new SupportingFile("reference.mustache", resourcesFolder, "reference.conf"));
-    supportingFiles.add(new SupportingFile("apiRequest.mustache",
-        (sourceFolder + File.separator + invokerPackage).replace(".", java.io.File.separator), "ApiRequest.scala"));
-    supportingFiles.add(new SupportingFile("apiInvoker.mustache",
-        (sourceFolder + File.separator + invokerPackage).replace(".", java.io.File.separator), "ApiInvoker.scala"));
-    supportingFiles.add(new SupportingFile("apiSettings.mustache",
-        (sourceFolder + File.separator + invokerPackage).replace(".", java.io.File.separator), "ApiSettings.scala"));
+    final String invokerFolder = (sourceFolder + File.separator + invokerPackage).replace(".", File.separator);
+    supportingFiles.add(new SupportingFile("apiRequest.mustache", invokerFolder, "ApiRequest.scala"));
+    supportingFiles.add(new SupportingFile("apiInvoker.mustache", invokerFolder, "ApiInvoker.scala"));
+    supportingFiles.add(new SupportingFile("apiSettings.mustache", invokerFolder, "ApiSettings.scala"));
 
     importMapping.remove("Seq");
     importMapping.remove("List");
@@ -98,10 +94,8 @@ public class AkkaScalaClientCodegen extends DefaultCodegen implements CodegenCon
     importMapping.remove("Map");
 
     importMapping.put("DateTime", "org.joda.time.DateTime");
-    importMapping.put("ListBuffer", "scala.collections.mutable.ListBuffer");
 
     typeMapping = new HashMap<String, String>();
-    typeMapping.put("enum", "NSString");
     typeMapping.put("array", "Seq");
     typeMapping.put("set", "Set");
     typeMapping.put("boolean", "Boolean");

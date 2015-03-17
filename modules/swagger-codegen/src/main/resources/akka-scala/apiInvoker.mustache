@@ -9,11 +9,9 @@ import akka.actor.ActorSystem
 import akka.io.IO
 import akka.pattern.ask
 import akka.util.Timeout
-import io.swagger.client.model.Account
 import org.joda.time.DateTime
 import org.joda.time.format.ISODateTimeFormat
 import org.json4s.JsonAST.JString
-import org.json4s.ext.JodaTimeSerializers
 import org.json4s.jackson.JsonMethods._
 import org.json4s.jackson.Serialization
 import org.json4s.{CustomSerializer, DefaultFormats, Extraction}
@@ -31,6 +29,7 @@ import spray.httpx.unmarshalling._
 import spray.io.ClientSSLEngineProvider
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.control.NonFatal
 
 trait ApiModel
 
@@ -38,135 +37,36 @@ object ApiInvoker {
 
   def apply()(implicit ec: ExecutionContext, system: ActorSystem): ApiInvoker = new ApiInvoker()
 
-  case class NumericValue(value: String) {
-    override def toString = value
-  }
-
-  object NumericValue {
-    def unapply(n: Any): Option[NumericValue] = n match {
-      case (_: Int | _: Long | _: Float | _: Double | _: Boolean | _: Byte) => Some(NumericValue(String.valueOf(n)))
-      case _ => None
-    }
-  }
-
   case class CustomStatusCode(value: Int, reason: String = "Application-defined status code", isSuccess: Boolean = true)
-
-  sealed trait CollectionFormat
-
-  trait MergedArrayFormat extends CollectionFormat {
-    def separator: String
-  }
-
-  case object CSV extends MergedArrayFormat {
-    override val separator = ","
-  }
-
-  case object TSV extends MergedArrayFormat {
-    override val separator = "\t"
-  }
-
-  case object SSV extends MergedArrayFormat {
-    override val separator = " "
-  }
-
-  case object PIPES extends MergedArrayFormat {
-    override val separator = "|"
-  }
-
-  case object MULTI extends CollectionFormat
-
-  case class ArrayValues(values: Seq[Any], format: CollectionFormat = CSV)
-
-  object ArrayValues {
-    def apply(values: Option[Seq[Any]], format: CollectionFormat): ArrayValues =
-      ArrayValues(values.getOrElse(Seq.empty), format)
-
-    def apply(values: Option[Seq[Any]]): ArrayValues = ArrayValues(values, CSV)
-  }
-
-  implicit class ParametersMapImprovements(val m: Map[String, Any]) {
-
-    private def urlEncode(v: Any) = URLEncoder.encode(String.valueOf(v), "utf-8").replaceAll("\\+", "%20")
-
-    private def formattedParams(tuple: (String, Any)): Seq[(String, Any)] = formattedParams(tuple._1, tuple._2)
-
-    private def formattedParams(name: String, value: Any): Seq[(String, Any)] = value match {
-      case arr: ArrayValues =>
-        arr.format match {
-          case MULTI => arr.values.flatMap(formattedParams(name, _))
-          case format: MergedArrayFormat => Seq((name, arr.values.mkString(format.separator)))
-        }
-      case None => Seq.empty
-      case Some(opt) =>
-        formattedParams(name, opt)
-      case s: Seq[Any] =>
-        formattedParams(name, ArrayValues(s))
-      case v: String => Seq((name, urlEncode(v)))
-      case NumericValue(v) => Seq((name, urlEncode(v)))
-      case f: File => Seq((name, f))
-      case m: ApiModel => Seq((name, m))
-    }
-
-    def asFormattedParamsList = m.toList.flatMap(formattedParams)
-
-    def asFormattedParams = m.flatMap(formattedParams)
-  }
 
   def addCustomStatusCode(code: CustomStatusCode): Unit = addCustomStatusCode(code.value, code.reason, code.isSuccess)
 
   def addCustomStatusCode(code: Int, reason: String = "Application defined code", isSuccess: Boolean = true) = {
-    if (StatusCodes.getForKey(code).isEmpty)
+    StatusCodes.getForKey(code) foreach { c =>
       StatusCodes.registerCustom(code, reason, reason, isSuccess, allowsEntity = true)
+    }
   }
 
 }
 
-sealed trait Credentials {
-  def asQueryParam: Option[(String, String)] = None
-}
 
-sealed trait ApiKeyLocation
 
-object ApiKeyLocations {
 
-  case object QUERY extends ApiKeyLocation
-
-  case object HEADER extends ApiKeyLocation
-
-}
-
-case object NoCredentials extends Credentials
-
-sealed case class ApiKeyValue(value: String)
-
-sealed case class ApiKeyCredentials(key: ApiKeyValue, keyName: String, location: ApiKeyLocation) extends Credentials {
-  override def asQueryParam: Option[(String, String)] = location match {
-    case ApiKeyLocations.QUERY => Some((keyName, key.value))
-    case _ => None
-  }
-}
-
-sealed case class BasicCredentials(user: String, password: String) extends Credentials
-
-case object EmptyContent
-
-sealed case class ApiError(code: Int, message: String) extends Throwable(message)
+sealed case class ApiError(code: Int, message: String, responseContent: Option[String], cause: Throwable = null)
+  extends Throwable(s"($code) $message.${responseContent.map(s => s" Content : $s").getOrElse("")}", cause)
 
 sealed case class ApiResponse[T](code: Int, content: T, headers: Map[String, String] = Map.empty)
 
-sealed case class ApiEmptyResponse(code: Int, headers: Map[String, String] = Map.empty)
+class ApiInvoker(implicit system: ActorSystem) extends UntrustedSslContext with CustomContentTypes {
 
-
-class ApiInvoker(implicit system: ActorSystem) extends UntrustedSslContext with CustomContentTypes with JsonUnmarshalling {
-
-  import io.swagger.client.core.ApiInvoker._
+  import ApiInvoker._
+  import ParametersMap._
 
   // TODO mettre ça ailleurs, et jarter le JsonExt vu qu'il sert qu'aux dates
-  case object DateTimeSerializer extends CustomSerializer[DateTime](format => (
-    {
-      case JString(s) =>
-        ISODateTimeFormat.dateTimeParser().parseDateTime(s)
-    }, {
+  case object DateTimeSerializer extends CustomSerializer[DateTime](format => ( {
+    case JString(s) =>
+      ISODateTimeFormat.dateTimeParser().parseDateTime(s)
+  }, {
     case d: DateTime =>
       JString(ISODateTimeFormat.dateTimeParser().print(d))
   }))
@@ -239,9 +139,11 @@ class ApiInvoker(implicit system: ActorSystem) extends UntrustedSslContext with 
   }
 
   private def createRequest(uri: Uri, request: ApiRequest): HttpRequest = {
-    val builder = new RequestBuilder(request.method)
+    import io.swagger.client.core.ApiMethodsUtils._
 
-    val httpRequest = request.method match {
+    val builder = new RequestBuilder(request.method.toSprayMethod)
+
+    val httpRequest = request.method.toSprayMethod match {
       case HttpMethods.GET | HttpMethods.DELETE => builder.apply(uri)
       case HttpMethods.POST | HttpMethods.PUT =>
         formDataContent(request) orElse bodyContent(request) match {
@@ -287,17 +189,8 @@ class ApiInvoker(implicit system: ActorSystem) extends UntrustedSslContext with 
     Uri(r.basePath + opPathWithParams).withQuery(query)
   }
 
-  implicit def jsonableUnmarshaller[T](implicit mf: Manifest[T]): Unmarshaller[T] =
-    Unmarshaller[T](MediaTypes.`application/json`) {
-      case x: HttpEntity.NonEmpty ⇒
-        parse(x.asString(defaultCharset = HttpCharsets.`UTF-8`))
-          .camelizeKeys
-          .extract[T]
-    }
-
-
   def execute(r: ApiRequest) = {
-
+        // TODO : Scala Try ? Future.fromTry ?
     try {
       implicit val timeout: Timeout = settings.connectionTimeout
 
@@ -317,51 +210,46 @@ class ApiInvoker(implicit system: ActorSystem) extends UntrustedSslContext with 
         Http.HostConnectorInfo(hostConnector, _) <- IO(Http) ? connector
         response <- hostConnector.ask(request).mapTo[HttpResponse]
       } yield {
-        response ~> decode(Deflate) ~> decode(Gzip) ~> extractFromJsonResponse[Account]
+        response ~> decode(Deflate) ~> decode(Gzip) ~> unmarshallApiResponse(r)
       }
-
     }
     catch {
-      // TODO mettre un truc plus joli ici...
-      case x: Throwable => Future.failed(x)
+      case NonFatal(x) => Future.failed(x)
     }
   }
 
-  def extractFromJsonResponse[T: FromResponseUnmarshaller](response: HttpResponse)(implicit m: Manifest[T]): T = {
-    response.as[T] match {
-      case Right(value) ⇒ value
-      case Left(error) ⇒
-        throw new ApiError(response.status.intValue,
-          s"$error - Expected: ${m.runtimeClass.getName} data. Content : "
-            + (if (response.entity.toString.length > 500) response.entity.toString.take(500) + "..." else response.entity.toString))
+  def unmarshallApiResponse(request: ApiRequest)(response: HttpResponse): ApiResponse[_] = {
+    request.responseForCode(response.status.intValue) match {
+      case Some(manifest: Manifest[_]) =>
+        entityUnmarshaller(manifest)(response.entity) match {
+          case Right(value) ⇒
+            ApiResponse(response.status.intValue, value)
+
+          case Left(MalformedContent(error, Some(cause))) ⇒
+            throw new ApiError(response.status.intValue, s"Unable to unmarshall content to [$manifest]", Some(response.entity.toString), cause)
+
+          case Left(MalformedContent(error, None)) ⇒
+            throw new ApiError(response.status.intValue, s"Unable to unmarshall content to [$manifest]", Some(response.entity.toString))
+
+          case Left(ContentExpected) ⇒
+            throw new ApiError(response.status.intValue, s"Unable to unmarshall empty response to [$manifest]", Some(response.entity.toString))
+        }
+
+      case _ => throw new ApiError(response.status.intValue, "Unexpected response code", Some(response.entity.toString))
     }
   }
 
-}
-
-trait JsonUnmarshalling {
-
-//  implicit val formats = DefaultFormats ++ JodaTimeSerializers.all
-//
-//  implicit def jsonableUnmarshaller[T](implicit mf: Manifest[T]): Unmarshaller[T] =
-//    Unmarshaller[T](MediaTypes.`application/json`) {
-//      case x: HttpEntity.NonEmpty ⇒
-//        parse(x.asString(defaultCharset = HttpCharsets.`UTF-8`))
-//          .camelizeKeys
-//          .extract[T]
-//    }
-//
-//  def extractFromJsonResponse[T: FromResponseUnmarshaller](response: HttpResponse)(implicit m: Manifest[T]): T = {
-//    response.as[T] match {
-//      case Right(value) ⇒ value
-//      case Left(error) ⇒
-//        throw new ApiError(response.status.intValue,
-//          s"$error - Expected: ${m.runtimeClass.getName} data. Content : "
-//            + (if (response.entity.toString.length > 500) response.entity.toString.take(500) + "..." else response.entity.toString))
-//    }
-//  }
+  def entityUnmarshaller[T](implicit mf: Manifest[T]): Unmarshaller[T] =
+    Unmarshaller[T](MediaTypes.`application/json`) {
+      case x: HttpEntity.NonEmpty ⇒
+        parse(x.asString(defaultCharset = HttpCharsets.`UTF-8`))
+          .camelizeKeys
+          .extract[T]
+    }
 
 }
+
+
 
 trait CustomContentTypes {
 
@@ -378,6 +266,12 @@ trait CustomContentTypes {
         throw new IllegalArgumentException(
           s"Error converting '$contentType' to a ContentType header: '${error.summary}'")
     }
+  }
+}
+
+object ApiMethodsUtils {
+  implicit class ApiMethodExtensions(val method: ApiMethod) {
+    def toSprayMethod: HttpMethod = HttpMethods.getForKey(method.value).getOrElse(HttpMethods.GET)
   }
 }
 
@@ -412,4 +306,3 @@ trait UntrustedSslContext {
         engine
     }
 }
-

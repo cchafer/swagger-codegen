@@ -5,7 +5,6 @@ package {{package}}
 import {{invokerPackage}}._
 import {{invokerPackage}}.ApiInvoker._
 import {{invokerPackage}}.ApiKeyLocations._
-import spray.http._
 
 {{#operations}}
 object {{classname}} {
@@ -15,7 +14,7 @@ object {{classname}} {
 {{>javadoc}}
 {{/javadocRenderer}}
   def {{operationId}}({{>methodParameters}}): ApiRequest =
-    ApiRequest(HttpMethods.{{httpMethod.toUpperCase}}, "{{basePath}}", "{{path}}", {{#consumes.0}}"{{mediaType}}"{{/consumes.0}}{{^consumes}}"application/json"{{/consumes}})
+    ApiRequest(ApiMethods.{{httpMethod.toUpperCase}}, "{{basePath}}", "{{path}}", {{#consumes.0}}"{{mediaType}}"{{/consumes.0}}{{^consumes}}"application/json"{{/consumes}})
       {{#authMethods}}{{#isApiKey}}.withApiKey(apiKey, "{{keyParamName}}", {{#isKeyInQuery}}QUERY{{/isKeyInQuery}}{{#isKeyInHeader}}HEADER{{/isKeyInHeader}})
       {{/isApiKey}}{{#isBasic}}.withCredentials(basicAuth)
       {{/isBasic}}{{/authMethods}}{{#bodyParam}}.withBody({{paramName}})
@@ -23,10 +22,10 @@ object {{classname}} {
       {{/formParams}}{{#queryParams}}.withQueryParam({{>paramCreation}})
       {{/queryParams}}{{#pathParams}}.withPathParam({{>paramCreation}})
       {{/pathParams}}{{#headerParams}}.withHeaderParam({{>paramCreation}})
-      {{/headerParams}}{{#responses}}{{^isWildcard}}{{#dataType}}.withResponse({{code}}, Some(classOf[{{dataType}}]))
-      {{/dataType}}{{^dataType}}.withResponse({{code}}, None)
-      {{/dataType}}{{/isWildcard}}{{/responses}}{{#responses}}{{#isWildcard}}{{#dataType}}.withDefaultResponse({{code}}, Some(classOf[{{dataType}}]))
-      {{/dataType}}{{^dataType}}.withDefaultResponse(None)
+      {{/headerParams}}{{#responses}}{{^isWildcard}}{{#dataType}}.withResponse[{{dataType}}]({{code}})
+      {{/dataType}}{{^dataType}}.withResponse[Int]({{code}})
+      {{/dataType}}{{/isWildcard}}{{/responses}}{{#responses}}{{#isWildcard}}{{#dataType}}.withDefaultResponse[{{dataType}}]()
+      {{/dataType}}{{^dataType}}.withDefaultResponse[Int]()
       {{/dataType}}{{/isWildcard}}{{/responses}}
 {{/operation}}
 

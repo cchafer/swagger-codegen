@@ -1,19 +1,18 @@
 package {{invokerPackage}}
 
 import akka.actor.ActorSystem
-import spray.http._
 
 import scala.concurrent.{ExecutionContext, Future}
 
 case class ApiRequest(
                        // required fields
-                       method: HttpMethod,
+                       method: ApiMethod,
                        basePath: String,
                        operationPath: String,
                        contentType: String,
 
                        // optional fields
-                       responses: Map[Int, Option[Class[_]]] = Map.empty,
+                       responses: Map[Int, Manifest[_]] = Map.empty,
                        bodyParam: Option[Any] = None,
                        formParams: Map[String, Any] = Map.empty,
                        pathParams: Map[String, Any] = Map.empty,
@@ -25,9 +24,11 @@ case class ApiRequest(
 
   def withApiKey(key: ApiKeyValue, keyName: String, location: ApiKeyLocation) = withCredentials(ApiKeyCredentials(key, keyName, location))
 
-  def withResponse[T](code: Int, responseClass: Option[Class[T]]) = copy(responses = responses + (code -> responseClass))
+  def withResponse[T](code: Int)(implicit m: Manifest[T]) = copy(responses = responses + (code -> m))
 
-  def withDefaultResponse[T](responseClass: Option[Class[T]]) = withResponse(0, responseClass)
+  def withDefaultResponse[T](implicit m: Manifest[T]) = withResponse[T](0)
+
+  def responseForCode(statusCode: Int): Option[Manifest[_]] = responses.get(statusCode) orElse responses.get(0)
 
   def withoutBody() = copy(bodyParam = None)
 
