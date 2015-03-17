@@ -7,5 +7,4 @@ public class CodegenSecurity {
   // ApiKey specific
   public String keyParamName;
   public Boolean isKeyInQuery, isKeyInHeader;
-
 }
