@@ -86,6 +86,7 @@ public class AkkaScalaClientCodegen extends DefaultCodegen implements CodegenCon
     final String invokerFolder = (sourceFolder + File.separator + invokerPackage).replace(".", File.separator);
     supportingFiles.add(new SupportingFile("apiRequest.mustache", invokerFolder, "ApiRequest.scala"));
     supportingFiles.add(new SupportingFile("apiInvoker.mustache", invokerFolder, "ApiInvoker.scala"));
+    supportingFiles.add(new SupportingFile("requests.mustache", invokerFolder, "requests.scala"));
     supportingFiles.add(new SupportingFile("apiSettings.mustache", invokerFolder, "ApiSettings.scala"));
 
     importMapping.remove("Seq");
@@ -232,7 +233,7 @@ public class AkkaScalaClientCodegen extends DefaultCodegen implements CodegenCon
   @Override
   public String getSwaggerType(Property p) {
     String swaggerType = super.getSwaggerType(p);
-    String type = null;
+    String type;
     if (typeMapping.containsKey(swaggerType)) {
       type = typeMapping.get(swaggerType);
       if (languageSpecificPrimitives.contains(type))

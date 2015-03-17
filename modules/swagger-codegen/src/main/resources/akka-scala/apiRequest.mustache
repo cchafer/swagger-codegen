@@ -1,9 +1,5 @@
 package {{invokerPackage}}
 
-import akka.actor.ActorSystem
-
-import scala.concurrent.{ExecutionContext, Future}
-
 case class ApiRequest(
                        // required fields
                        method: ApiMethod,
@@ -41,11 +37,4 @@ case class ApiRequest(
   def withQueryParam(name: String, value: Any) = copy(queryParams = queryParams + (name -> value))
 
   def withHeaderParam(name: String, value: Any) = copy(headerParams = headerParams + (name -> value))
-
-  def execute(invoker: ApiInvoker)(implicit ec: ExecutionContext, system: ActorSystem): Future[Any] =
-    execute(ec, system, invoker)
-
-  def execute(implicit ec: ExecutionContext, system: ActorSystem, invoker: ApiInvoker): Future[Any] =
-    invoker.execute(this)
-
 }
