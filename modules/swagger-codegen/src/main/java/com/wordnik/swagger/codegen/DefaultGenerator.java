@@ -65,8 +65,15 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
       }
       else
         hostBuilder.append("https://");
-      hostBuilder.append(swagger.getHost()).append(swagger.getBasePath());
-      String contextPath = swagger.getBasePath();
+      if(swagger.getHost() != null)
+        hostBuilder.append(swagger.getHost());
+      else
+        hostBuilder.append("localhost");
+      if(swagger.getBasePath() != null)
+        hostBuilder.append(swagger.getBasePath());
+      else
+        hostBuilder.append("/");
+      String contextPath = swagger.getBasePath() == null ? "/" : swagger.getBasePath();
       String basePath = hostBuilder.toString();
 
 
@@ -119,7 +126,14 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
         operation.putAll(config.additionalProperties());
         operation.put("classname", config.toApiName(tag));
         operation.put("classVarName", config.toApiVarName(tag));
-        allOperations.add(operation);
+        
+        allOperations.add(new HashMap<String, Object>(operation));
+        for(int i = 0; i < allOperations.size(); i++) {
+          Map<String, Object> oo = (Map<String, Object>) allOperations.get(i);
+          if(i < (allOperations.size() -1))
+            oo.put("hasMore", "true");
+        }
+
         for(String templateName : config.apiTemplateFiles().keySet()) {
           String suffix = config.apiTemplateFiles().get(templateName);
           String filename = config.apiFileFolder() +
@@ -153,9 +167,11 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
 
       Map<String, Object> apis = new HashMap<String, Object>();
       apis.put("apis", allOperations);
-      if(swagger.getBasePath() != null) {
-        bundle.put("basePath", basePath);
+      if(swagger.getHost() != null) {
+        bundle.put("host", swagger.getHost());
       }
+      bundle.put("basePath", basePath);
+      bundle.put("contextPath", contextPath);
       bundle.put("apiInfo", apis);
       bundle.put("models", allModels);
       bundle.put("apiFolder", config.apiPackage().replace('.', File.separatorChar));
@@ -319,6 +335,14 @@ public class DefaultGenerator extends AbstractGenerator implements Generator {
 
     operations.put("imports", imports);
     config.postProcessOperations(operations);
+    if(objs.size() > 0) {
+      List<CodegenOperation> os = (List<CodegenOperation>) objs.get("operation");
+
+      if(os != null && os.size() > 0) {
+        CodegenOperation op = os.get(os.size() - 1);
+          op.hasMore = null;
+      }
+    }
     return operations;
   }
 
