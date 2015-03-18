@@ -11,6 +11,6 @@ public class CodegenResponse {
   public Boolean primitiveType;
   public Boolean isMapContainer;
   public Boolean isListContainer;
-  public Boolean isWildcard() { return "0".equals(code); }
-  Object schema;
+  public Object schema;
+  public String jsonSchema;
 }
