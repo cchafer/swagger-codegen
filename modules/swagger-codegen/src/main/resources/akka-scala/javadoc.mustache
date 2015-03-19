@@ -4,7 +4,9 @@
 
 Expected answers:
 {{#responses}}
-  code {{code}} : {{dataType}} {{^message.isEmpty}}({{message}}){{/message.isEmpty}}
+  code {{code}} : {{dataType}} {{^message.isEmpty}}({{message}}){{/message.isEmpty}}{{^headers.isEmpty}}
+             Headers :{{#headers}}
+               {{baseName}} - {{description}}{{/headers}}{{/headers.isEmpty}}
 {{/responses}}
 {{#authMethods.0}}
 
