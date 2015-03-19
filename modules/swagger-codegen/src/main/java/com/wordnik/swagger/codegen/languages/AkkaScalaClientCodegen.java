@@ -80,6 +80,7 @@ public class AkkaScalaClientCodegen extends DefaultCodegen implements CodegenCon
     additionalProperties.put("defaultTimeout", defaultTimeoutInMs);
     if (renderJavadoc)
       additionalProperties.put("javadocRenderer", new JavadocLambda());
+    additionalProperties.put("fnCapitalize", new CapitalizeLambda());
 
     supportingFiles.add(new SupportingFile("pom.mustache", "", "pom.xml"));
     supportingFiles.add(new SupportingFile("reference.mustache", resourcesFolder, "reference.conf"));
@@ -102,6 +103,7 @@ public class AkkaScalaClientCodegen extends DefaultCodegen implements CodegenCon
     typeMapping.put("boolean", "Boolean");
     typeMapping.put("string", "String");
     typeMapping.put("int", "Int");
+    typeMapping.put("integer", "Int");
     typeMapping.put("long", "Long");
     typeMapping.put("float", "Float");
     typeMapping.put("byte", "Byte");
@@ -111,6 +113,7 @@ public class AkkaScalaClientCodegen extends DefaultCodegen implements CodegenCon
     typeMapping.put("double", "Double");
     typeMapping.put("object", "Any");
     typeMapping.put("file", "File");
+    typeMapping.put("number", "Double");
 
     languageSpecificPrimitives = new HashSet<String>(
         Arrays.asList(
@@ -220,15 +223,18 @@ public class AkkaScalaClientCodegen extends DefaultCodegen implements CodegenCon
     return super.toOperationId(CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_CAMEL, operationId));
   }
 
-  @Override
-  public String toParamName(String name) {
-    return super.toParamName(camelize(name));
+  private String formatIdentifier(String name) {
+    final String camelized = camelize(name);
+    if (camelized.matches("[a-zA-Z_$][\\w_$]+") && !reservedWords.contains(camelized))
+      return camelized;
+    return escapeReservedWord(camelized);
   }
 
   @Override
-  public String toVarName(String name) {
-    return super.toVarName(camelize(name));
-  }
+  public String toParamName(String name) { return formatIdentifier(name); }
+
+  @Override
+  public String toVarName(String name) { return formatIdentifier(name); }
 
   @Override
   public String getSwaggerType(Property p) {
@@ -289,7 +295,7 @@ public class AkkaScalaClientCodegen extends DefaultCodegen implements CodegenCon
       return "null";
   }
 
-  private String camelize(String value) {
+  private static String camelize(String value) {
     String[] strings = StringUtils.split(value, "_");
     for (int i = 1; i < strings.length; i++) {
       strings[i] = StringUtils.capitalize(strings[i]);
@@ -309,8 +315,18 @@ public class AkkaScalaClientCodegen extends DefaultCodegen implements CodegenCon
       for (String line : lines) {
         sb.append("   * ").append(line).append("\n");
       }
-      sb.append("   */\n");
-      out.write(sb.toString());
+    }
+  }
+
+  private static class CapitalizeLambda implements Mustache.Lambda {
+    @Override
+    public void execute(Template.Fragment frag, Writer out) throws IOException {
+      final StringWriter tempWriter = new StringWriter();
+      frag.execute(tempWriter);
+      String fragValue = tempWriter.toString();
+      if (!fragValue.isEmpty())
+        fragValue = fragValue.substring(0, 1).toUpperCase() + fragValue.substring(1);
+      out.write(fragValue);
     }
   }
 }

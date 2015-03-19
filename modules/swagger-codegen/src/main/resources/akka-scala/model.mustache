@@ -9,7 +9,7 @@ import org.joda.time.DateTime
 
 case class {{classname}} (
   {{#vars}}{{#description}}/* {{{description}}} */
-  {{/description}}{{name}}: {{{datatype}}}{{#hasMore}},{{/hasMore}}{{^hasMore}}){{/hasMore}}
+  {{/description}}{{name}}: {{^required}}Option[{{datatype}}]{{/required}}{{#required}}{{datatype}}{{/required}}{{#hasMore}},{{/hasMore}}{{^hasMore}}){{/hasMore}}
   {{/vars}} extends ApiModel
 {{/model}}
 {{/models}}

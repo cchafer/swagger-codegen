@@ -1,10 +1,10 @@
 package {{package}}
 
-{{#imports}}import {{import}}
+{{#imports}}
+import {{import}}
 {{/imports}}
 import {{invokerPackage}}._
 import {{invokerPackage}}.CollectionFormats._
-import {{invokerPackage}}.ApiInvoker._
 import {{invokerPackage}}.ApiKeyLocations._
 
 {{#operations}}
@@ -27,7 +27,11 @@ object {{classname}} {
       {{/dataType}}{{^dataType}}.withResponse[Int]({{code}})
       {{/dataType}}{{/isWildcard}}{{/responses}}{{#responses}}{{#isWildcard}}{{#dataType}}.withDefaultResponse[{{dataType}}]()
       {{/dataType}}{{^dataType}}.withDefaultResponse[Int]()
-      {{/dataType}}{{/isWildcard}}{{/responses}}
+      {{/dataType}}{{/isWildcard}}{{/responses}}{{^responseHeaders.isEmpty}}
+  object {{#fnCapitalize}}{{operationId}}{{/fnCapitalize}}Headers { {{#responseHeaders}}
+    def {{name}}(r: ApiResponse[_]) = r.get{{^isContainer}}{{baseType}}{{/isContainer}}{{#isContainer}}String{{/isContainer}}Header("{{baseName}}"){{/responseHeaders}}
+  }
+  {{/responseHeaders.isEmpty}}
 {{/operation}}
 
 {{#unknownStatusCodes}}

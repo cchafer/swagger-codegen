@@ -227,7 +227,7 @@ class ApiInvoker(implicit system: ActorSystem) extends UntrustedSslContext with 
       case Some(manifest: Manifest[_]) =>
         entityUnmarshaller(manifest)(response.entity) match {
           case Right(value) ⇒
-            ApiResponse(response.status.intValue, value)
+            ApiResponse(response.status.intValue, value, response.headers.map(header => (header.name, header.value)) toMap)
 
           case Left(MalformedContent(error, Some(cause))) ⇒
             throw new ApiError(response.status.intValue, s"Unable to unmarshall content to [$manifest]", Some(response.entity.toString), cause)
@@ -247,6 +247,7 @@ class ApiInvoker(implicit system: ActorSystem) extends UntrustedSslContext with 
     Unmarshaller[T](MediaTypes.`application/json`) {
       case x: HttpEntity.NonEmpty ⇒
         parse(x.asString(defaultCharset = HttpCharsets.`UTF-8`))
+          .noNulls
           .camelizeKeys
           .extract[T]
     }
