@@ -11,9 +11,10 @@ import akka.util.Timeout
 import org.joda.time.DateTime
 import org.joda.time.format.ISODateTimeFormat
 import org.json4s.JsonAST.JString
+import org.json4s._
 import org.json4s.jackson.JsonMethods._
 import org.json4s.jackson.Serialization
-import org.json4s.{CustomSerializer, DefaultFormats, Extraction}
+import org.json4s.reflect.TypeInfo
 import spray.can.Http
 import spray.can.Http.HostConnectorSetup
 import spray.client.pipelining
@@ -28,11 +29,16 @@ import spray.httpx.unmarshalling._
 import spray.io.ClientSSLEngineProvider
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.reflect.ClassTag
 import scala.util.control.NonFatal
 
 object ApiInvoker {
 
-  def apply()(implicit ec: ExecutionContext, system: ActorSystem): ApiInvoker = new ApiInvoker()
+  def apply()(implicit system: ActorSystem): ApiInvoker =
+    apply(DefaultFormats + DateTimeSerializer)
+  def apply(serializers: Traversable[Serializer[_]])(implicit system: ActorSystem): ApiInvoker =
+    apply(DefaultFormats + DateTimeSerializer ++ serializers)
+  def apply(formats: Formats)(implicit system: ActorSystem): ApiInvoker = new ApiInvoker(formats)
 
   case class CustomStatusCode(value: Int, reason: String = "Application-defined status code", isSuccess: Boolean = true)
 
@@ -45,16 +51,23 @@ object ApiInvoker {
   }
 
   /**
-   * Allows request.execute instead of apiInvoker.execute(request)
-   *
+   * Allows request execution without calling apiInvoker.execute(request)
+   * request.response can be used to get a future of the ApiResponse generated.
+   * request.result can be used to get a future of the expected ApiResponse content. If content doesn't match, a
+   *    Future will failed with a ClassCastException
    * @param request the apiRequest to be executed
    */
-  implicit class ApiRequestImprovements(request: ApiRequest) {
-    def execute(invoker: ApiInvoker)(implicit ec: ExecutionContext, system: ActorSystem): Future[Any] =
-      execute(ec, system, invoker)
+  implicit class ApiRequestImprovements[T](request: ApiRequest[T]) {
 
-    def execute(implicit ec: ExecutionContext, system: ActorSystem, invoker: ApiInvoker): Future[Any] =
+    def response(invoker: ApiInvoker)(implicit ec: ExecutionContext, system: ActorSystem): Future[ApiResponse[T]] =
+      response(ec, system, invoker)
+
+    def response(implicit ec: ExecutionContext, system: ActorSystem, invoker: ApiInvoker): Future[ApiResponse[T]] =
       invoker.execute(request)
+
+    def result[U <: T](implicit c: ClassTag[U], ec: ExecutionContext, system: ActorSystem, invoker: ApiInvoker): Future[U] =
+      invoker.execute(request).map(_.content).mapTo[U]
+
   }
 
   /**
@@ -73,15 +86,68 @@ object ApiInvoker {
       JString(ISODateTimeFormat.dateTimeParser().print(d))
   }))
 
+
+  class EnumSerializer[E <: Enumeration: ClassTag](enum: E)
+    extends Serializer[E#Value] {
+    import JsonDSL._
+
+    val EnumerationClass = classOf[E#Value]
+
+    private[this] def isValid(json: JValue) = json match {
+      case JInt(value) => value <= enum.maxId
+      case _ => false
+    }
+
+    def deserialize(implicit format: Formats):
+    PartialFunction[(TypeInfo, JValue), E#Value] = {
+      case (TypeInfo(EnumerationClass, _), json) if isValid(json) => json match {
+        case JInt(value) => enum(value.toInt)
+        case value => throw new MappingException(s"Can't convert $value to $EnumerationClass")
+      }
+    }
+
+    def serialize(implicit format: Formats): PartialFunction[Any, JValue] = {
+      case i: E#Value => i.id
+    }
+  }
+
+  class EnumNameSerializer[E <: Enumeration: ClassTag](enum: E)
+    extends Serializer[E#Value] {
+    import JsonDSL._
+
+    val EnumerationClass = classOf[E#Value]
+
+    def deserialize(implicit format: Formats):
+    PartialFunction[(TypeInfo, JValue), E#Value] = {
+      case (t @ TypeInfo(EnumerationClass, _), json) if isValid(json) => {
+        json match {
+          case JString(value) =>
+            enum.withName(value)
+          case value =>
+            throw new MappingException(s"Can't convert $value to $EnumerationClass")
+        }
+      }
+    }
+
+    private[this] def isValid(json: JValue) = json match {
+      case JString(value) if enum.values.exists(_.toString == value) => true
+      case _ => false
+    }
+
+    def serialize(implicit format: Formats): PartialFunction[Any, JValue] = {
+      case i: E#Value => i.toString
+    }
+  }
+
 }
 
-class ApiInvoker(implicit system: ActorSystem) extends UntrustedSslContext with CustomContentTypes {
+class ApiInvoker(formats: Formats)(implicit system: ActorSystem) extends UntrustedSslContext with CustomContentTypes {
 
   import io.swagger.client.core.ApiInvoker._
   import io.swagger.client.core.ParametersMap._
 
   implicit val ec = system.dispatcher
-  implicit val formats = DefaultFormats + DateTimeSerializer
+  implicit val jsonFormats = formats
 
   def settings = ApiSettings(system)
 
@@ -126,7 +192,7 @@ class ApiInvoker(implicit system: ActorSystem) extends UntrustedSslContext with 
     }
   }
 
-  private def formDataContent(request: ApiRequest) = {
+  private def formDataContent(request: ApiRequest[_]) = {
     val params = request.formParams.asFormattedParams
     if (params.isEmpty)
       None
@@ -143,11 +209,11 @@ class ApiInvoker(implicit system: ActorSystem) extends UntrustedSslContext with 
       )
   }
 
-  private def bodyContent(request: ApiRequest): Option[Any] = {
+  private def bodyContent(request: ApiRequest[_]): Option[Any] = {
     request.bodyParam.map(Extraction.decompose).map(compact)
   }
 
-  private def createRequest(uri: Uri, request: ApiRequest): HttpRequest = {
+  private def createRequest(uri: Uri, request: ApiRequest[_]): HttpRequest = {
 
     val builder = new RequestBuilder(request.method.toSprayMethod)
     val httpRequest = request.method.toSprayMethod match {
@@ -172,7 +238,7 @@ class ApiInvoker(implicit system: ActorSystem) extends UntrustedSslContext with 
       encode(Gzip(CompressionFilter))
   }
 
-  def makeQuery(r: ApiRequest): Query = {
+  def makeQuery(r: ApiRequest[_]): Query = {
     r.credentials.foldLeft(r.queryParams) {
       case (params, ApiKeyCredentials(key, keyName, ApiKeyLocations.QUERY)) =>
         params + (keyName -> key.value)
@@ -184,7 +250,7 @@ class ApiInvoker(implicit system: ActorSystem) extends UntrustedSslContext with 
     }
   }
 
-  def makeUri(r: ApiRequest): Uri = {
+  def makeUri(r: ApiRequest[_]): Uri = {
     val opPath = r.operationPath.replaceAll("\\{format\\}", "json")
     val opPathWithParams = r.pathParams.asFormattedParams
       .mapValues(String.valueOf)
@@ -196,7 +262,7 @@ class ApiInvoker(implicit system: ActorSystem) extends UntrustedSslContext with 
     Uri(r.basePath + opPathWithParams).withQuery(query)
   }
 
-  def execute(r: ApiRequest) = {
+  def execute[T](r: ApiRequest[T]): Future[ApiResponse[T]] = {
     try {
       implicit val timeout: Timeout = settings.connectionTimeout
 
@@ -222,12 +288,12 @@ class ApiInvoker(implicit system: ActorSystem) extends UntrustedSslContext with 
     }
   }
 
-  def unmarshallApiResponse(request: ApiRequest)(response: HttpResponse): ApiResponse[_] = {
+  def unmarshallApiResponse[T](request: ApiRequest[T])(response: HttpResponse): ApiResponse[T] = {
     request.responseForCode(response.status.intValue) match {
-      case Some(manifest: Manifest[_]) =>
+      case Some(manifest: Manifest[T]) =>
         entityUnmarshaller(manifest)(response.entity) match {
           case Right(value) ⇒
-            ApiResponse(response.status.intValue, value, response.headers.map(header => (header.name, header.value)) toMap)
+            ApiResponse(response.status.intValue, value, response.headers.map(header => (header.name, header.value)).toMap)
 
           case Left(MalformedContent(error, Some(cause))) ⇒
             throw new ApiError(response.status.intValue, s"Unable to unmarshall content to [$manifest]", Some(response.entity.toString), cause)

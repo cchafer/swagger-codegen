@@ -81,6 +81,8 @@ public class AkkaScalaClientCodegen extends DefaultCodegen implements CodegenCon
     if (renderJavadoc)
       additionalProperties.put("javadocRenderer", new JavadocLambda());
     additionalProperties.put("fnCapitalize", new CapitalizeLambda());
+    additionalProperties.put("fnCamelize", new CamelizeLambda(false));
+    additionalProperties.put("fnEnumEntry", new EnumEntryLambda());
 
     supportingFiles.add(new SupportingFile("pom.mustache", "", "pom.xml"));
     supportingFiles.add(new SupportingFile("reference.mustache", resourcesFolder, "reference.conf"));
@@ -89,6 +91,7 @@ public class AkkaScalaClientCodegen extends DefaultCodegen implements CodegenCon
     supportingFiles.add(new SupportingFile("apiInvoker.mustache", invokerFolder, "ApiInvoker.scala"));
     supportingFiles.add(new SupportingFile("requests.mustache", invokerFolder, "requests.scala"));
     supportingFiles.add(new SupportingFile("apiSettings.mustache", invokerFolder, "ApiSettings.scala"));
+    supportingFiles.add(new SupportingFile("enumsSerializers.mustache", invokerFolder, "EnumsSerializers.scala"));
 
     importMapping.remove("Seq");
     importMapping.remove("List");
@@ -223,18 +226,28 @@ public class AkkaScalaClientCodegen extends DefaultCodegen implements CodegenCon
     return super.toOperationId(CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_CAMEL, operationId));
   }
 
-  private String formatIdentifier(String name) {
-    final String camelized = camelize(name);
-    if (camelized.matches("[a-zA-Z_$][\\w_$]+") && !reservedWords.contains(camelized))
-      return camelized;
-    return escapeReservedWord(camelized);
+  private String formatIdentifier(String name, boolean capitalized) {
+    String identifier = camelize(name);
+    if (capitalized)
+      identifier = StringUtils.capitalize(identifier);
+    if (identifier.matches("[a-zA-Z_$][\\w_$]+") && !reservedWords.contains(identifier))
+      return identifier;
+    return escapeReservedWord(identifier);
   }
 
   @Override
-  public String toParamName(String name) { return formatIdentifier(name); }
+  public String toParamName(String name) { return formatIdentifier(name, false); }
 
   @Override
-  public String toVarName(String name) { return formatIdentifier(name); }
+  public String toVarName(String name) {
+    return formatIdentifier(name, false);
+  }
+
+  @Override
+  public String toEnumName(CodegenProperty property)
+  {
+    return formatIdentifier(property.baseName, true);
+  }
 
   @Override
   public String getSwaggerType(Property p) {
@@ -297,36 +310,67 @@ public class AkkaScalaClientCodegen extends DefaultCodegen implements CodegenCon
 
   private static String camelize(String value) {
     String[] strings = StringUtils.split(value, "_");
+    if (strings.length > 0)
+      strings[0] = strings[0].toLowerCase();
     for (int i = 1; i < strings.length; i++) {
-      strings[i] = StringUtils.capitalize(strings[i]);
+      strings[i] = StringUtils.capitalize(strings[i].toLowerCase());
     }
     return StringUtils.join(strings);
   }
 
-  private static class JavadocLambda implements Mustache.Lambda {
+  private static abstract class CustomLambda implements Mustache.Lambda {
     @Override
     public void execute(Template.Fragment frag, Writer out) throws IOException {
       final StringWriter tempWriter = new StringWriter();
       frag.execute(tempWriter);
-      final String renderedFrag = tempWriter.toString();
-      final String[] lines = renderedFrag.split("\\r?\\n");
+      out.write(formatFragment(tempWriter.toString()));
+    }
+    public abstract String formatFragment(String fragment);
+  }
+
+
+  private static class JavadocLambda extends CustomLambda {
+    @Override
+    public String formatFragment(String fragment) {
+      final String[] lines = fragment.split("\\r?\\n");
       final StringBuilder sb = new StringBuilder();
       sb.append("  /**\n");
       for (String line : lines) {
         sb.append("   * ").append(line).append("\n");
       }
+      sb.append("   */\n");
+      return sb.toString();
     }
   }
 
-  private static class CapitalizeLambda implements Mustache.Lambda {
+  private static class CapitalizeLambda extends CustomLambda {
     @Override
-    public void execute(Template.Fragment frag, Writer out) throws IOException {
-      final StringWriter tempWriter = new StringWriter();
-      frag.execute(tempWriter);
-      String fragValue = tempWriter.toString();
-      if (!fragValue.isEmpty())
-        fragValue = fragValue.substring(0, 1).toUpperCase() + fragValue.substring(1);
-      out.write(fragValue);
+    public String formatFragment(String fragment) {
+      return StringUtils.capitalize(fragment);
     }
   }
+
+  private static class CamelizeLambda extends CustomLambda {
+    private final boolean capitalizeFirst;
+
+    public CamelizeLambda(boolean capitalizeFirst) {
+      this.capitalizeFirst = capitalizeFirst;
+    }
+
+    @Override
+    public String formatFragment(String fragment) {
+      if (capitalizeFirst)
+        return StringUtils.capitalize(camelize(fragment));
+      else
+        return camelize(fragment);
+    }
+  }
+
+  private class EnumEntryLambda extends CustomLambda {
+  @Override
+    public String formatFragment(String fragment) {
+      return formatIdentifier(fragment, true);
+    }
+  }
+
 }

@@ -160,6 +160,9 @@ public class DefaultCodegen {
     return name;
   }
 
+  public String toEnumName(CodegenProperty property) {
+    return StringUtils.capitalize(property.name) + "Enum";
+  }
 
   public String escapeReservedWord(String name) {
     throw new RuntimeException("reserved word " + name + " not allowed");
@@ -400,6 +403,7 @@ public class DefaultCodegen {
       }
       if(impl.getProperties() != null && impl.getProperties().size() > 0) {
         m.hasVars = true;
+        m.hasEnums = false;
         for(String key: impl.getProperties().keySet()) {
           Property prop = impl.getProperties().get(key);
 
@@ -427,6 +431,8 @@ public class DefaultCodegen {
             }
             m.vars.add(cp);
             count += 1;
+            if (cp.isEnum)
+              m.hasEnums = true;
             if(count != impl.getProperties().keySet().size())
               cp.hasMore = new Boolean(true);
             if(cp.isContainer != null) {
@@ -524,7 +530,7 @@ public class DefaultCodegen {
 
     // this can cause issues for clients which don't support enums
     if(property.isEnum)
-      property.datatypeWithEnum = StringUtils.capitalize(property.name) + "Enum";
+      property.datatypeWithEnum = toEnumName(property);
     else
       property.datatypeWithEnum = property.datatype;
 
