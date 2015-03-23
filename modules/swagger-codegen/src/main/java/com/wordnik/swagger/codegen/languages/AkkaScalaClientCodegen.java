@@ -318,6 +318,7 @@ public class AkkaScalaClientCodegen extends DefaultCodegen implements CodegenCon
     return StringUtils.join(strings);
   }
 
+
   private static abstract class CustomLambda implements Mustache.Lambda {
     @Override
     public void execute(Template.Fragment frag, Writer out) throws IOException {
