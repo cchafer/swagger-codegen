@@ -310,13 +310,13 @@ public class AkkaScalaClientCodegen extends DefaultCodegen implements CodegenCon
   }
 
   private static String camelize(String value) {
+    if (value.toUpperCase().equals(value))
+      value = value.toLowerCase();
     String[] strings = StringUtils.split(value, "_");
-    if (strings.length > 0)
-      strings[0] = strings[0].toLowerCase();
     for (int i = 1; i < strings.length; i++) {
-      strings[i] = StringUtils.capitalize(strings[i].toLowerCase());
+      strings[i] = StringUtils.capitalize(strings[i]);
     }
-    return StringUtils.join(strings);
+    return StringUtils.uncapitalize(StringUtils.join(strings));
   }
 
 
