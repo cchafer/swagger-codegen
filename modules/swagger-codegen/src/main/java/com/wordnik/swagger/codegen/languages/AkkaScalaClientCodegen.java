@@ -309,17 +309,6 @@ public class AkkaScalaClientCodegen extends DefaultCodegen implements CodegenCon
       return "null";
   }
 
-  private static String camelize(String value) {
-    if (value.toUpperCase().equals(value))
-      value = value.toLowerCase();
-    String[] strings = StringUtils.split(value, "_");
-    for (int i = 1; i < strings.length; i++) {
-      strings[i] = StringUtils.capitalize(strings[i]);
-    }
-    return StringUtils.uncapitalize(StringUtils.join(strings));
-  }
-
-
   private static abstract class CustomLambda implements Mustache.Lambda {
     @Override
     public void execute(Template.Fragment frag, Writer out) throws IOException {
@@ -361,10 +350,7 @@ public class AkkaScalaClientCodegen extends DefaultCodegen implements CodegenCon
 
     @Override
     public String formatFragment(String fragment) {
-      if (capitalizeFirst)
-        return StringUtils.capitalize(camelize(fragment));
-      else
-        return camelize(fragment);
+      return camelize(fragment, !capitalizeFirst);
     }
   }
 

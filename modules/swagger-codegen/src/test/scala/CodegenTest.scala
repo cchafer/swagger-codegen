@@ -18,7 +18,7 @@ class CodegenTest extends FlatSpec with Matchers {
     val codegen = new DefaultCodegen()
     val path = "/pet/{petId}/uploadImage"
     val p = model.getPaths().get(path).getPost()
-    val op = codegen.fromOperation(path, "post", p)
+    val op = codegen.fromOperation(path, "post", p, model.getDefinitions())
 
     op.operationId should be ("uploadFile")
     op.httpMethod should be ("POST")
@@ -36,7 +36,7 @@ class CodegenTest extends FlatSpec with Matchers {
     val file = formParams.get(1)
     file.isFormParam should equal (true)
     file.dataType should be ("file")
-    file.required should equal (false)
+    file.required should equal (null)
     file.isFile should equal (true)
     file.hasMore should be (null)
   }
@@ -48,7 +48,7 @@ class CodegenTest extends FlatSpec with Matchers {
     val codegen = new DefaultCodegen()
     val path = "/pet/{petId}"
     val p = model.getPaths().get(path).getPost()
-    val op = codegen.fromOperation(path, "post", p)
+    val op = codegen.fromOperation(path, "post", p, model.getDefinitions())
 
     op.operationId should be ("updatePetWithForm")
     op.httpMethod should be ("POST")
@@ -80,14 +80,14 @@ class CodegenTest extends FlatSpec with Matchers {
     nameParam.isFormParam should equal (true)
     nameParam.notFile should equal (true)
     nameParam.dataType should be ("String")
-    nameParam.required should equal (false)
+    nameParam.required should equal (null)
     nameParam.hasMore should equal (true)
 
     val statusParam = formParams.get(1)
     statusParam.isFormParam should equal (true)
     statusParam.notFile should equal (true)
     statusParam.dataType should be ("String")
-    statusParam.required should equal (false)    
+    statusParam.required should equal (null)    
     statusParam.hasMore should be (null)    
   }
 
@@ -104,7 +104,7 @@ class CodegenTest extends FlatSpec with Matchers {
     }
     val path = "/tests/requiredParams"
     val p = model.getPaths().get(path).getGet()
-    val op = codegen.fromOperation(path, "get", p)
+    val op = codegen.fromOperation(path, "get", p, model.getDefinitions)
 
     val formParams = op.formParams
     formParams.size should be(2)
@@ -125,7 +125,7 @@ class CodegenTest extends FlatSpec with Matchers {
 
     val path = "/tests/withTwoHundredAndDefault"
     val p = model.getPaths().get(path).getGet()
-    val op = codegen.fromOperation(path, "get", p)
+    val op = codegen.fromOperation(path, "get", p, model.getDefinitions())
     op.returnType should be("String")
 
   }
@@ -138,9 +138,7 @@ class CodegenTest extends FlatSpec with Matchers {
 
     val path = "/tests/withoutTwoHundredButDefault"
     val p = model.getPaths().get(path).getGet()
-    val op = codegen.fromOperation(path, "get", p)
+    val op = codegen.fromOperation(path, "get", p, model.getDefinitions())
     op.returnType should be("String")
-
   }
-
 }

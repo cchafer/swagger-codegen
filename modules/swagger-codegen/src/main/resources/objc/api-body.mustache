@@ -1,6 +1,7 @@
 {{#operations}}
 #import "{{classname}}.h"
 #import "SWGFile.h"
+#import "SWGQueryParamCollection.h"
 #import "SWGApiClient.h"
 {{#imports}}#import "{{import}}.h"
 {{/imports}}
@@ -55,7 +56,7 @@ static NSString * basePath = @"{{basePath}}";
 {{#operation}}
 -(NSNumber*) {{nickname}}WithCompletionBlock{{^allParams}}: {{/allParams}}{{#allParams}}{{#secondaryParam}} {{paramName}}{{/secondaryParam}}: ({{{dataType}}}) {{paramName}}
         {{/allParams}}
-        {{#returnBaseType}}{{#hasParams}}completionHandler: {{/hasParams}}(void (^)({{returnType}} output, NSError* error))completionBlock{{/returnBaseType}}
+        {{#returnBaseType}}{{#hasParams}}completionHandler: {{/hasParams}}(void (^)({{{returnType}}} output, NSError* error))completionBlock{{/returnBaseType}}
         {{^returnBaseType}}{{#hasParams}}completionHandler: {{/hasParams}}(void (^)(NSError* error))completionBlock{{/returnBaseType}} {
 
     NSMutableString* requestUrl = [NSMutableString stringWithFormat:@"%@{{path}}", basePath];
@@ -71,8 +72,12 @@ static NSString * basePath = @"{{basePath}}";
     NSString* responseContentType = @"application/json";
 
     NSMutableDictionary* queryParams = [[NSMutableDictionary alloc] init];
-    {{#queryParams}}if({{paramName}} != nil)
-        queryParams[@"{{baseName}}"] = {{paramName}};
+    {{#queryParams}}if({{paramName}} != nil) {
+        {{#collectionFormat}}
+        queryParams[@"{{baseName}}"] = [[SWGQueryParamCollection alloc] initWithValuesAndFormat: {{baseName}} format: @"{{collectionFormat}}"];
+        {{/collectionFormat}}
+        {{^collectionFormat}}queryParams[@"{{baseName}}"] = {{paramName}};{{/collectionFormat}}
+    }
     {{/queryParams}}
     NSMutableDictionary* headerParams = [[NSMutableDictionary alloc] init];
     {{#headerParams}}if({{paramName}} != nil)
@@ -86,8 +91,8 @@ static NSString * basePath = @"{{basePath}}";
     if(__body != nil && [__body isKindOfClass:[NSArray class]]){
         NSMutableArray * objs = [[NSMutableArray alloc] init];
         for (id dict in (NSArray*)__body) {
-            if([dict respondsToSelector:@selector(asDictionary)]) {
-                [objs addObject:[(SWGObject*)dict asDictionary]];
+            if([dict respondsToSelector:@selector(toDictionary)]) {
+                [objs addObject:[(SWGObject*)dict toDictionary]];
             }
             else{
                 [objs addObject:dict];
@@ -95,8 +100,8 @@ static NSString * basePath = @"{{basePath}}";
         }
         bodyDictionary = objs;
     }
-    else if([__body respondsToSelector:@selector(asDictionary)]) {
-        bodyDictionary = [(SWGObject*)__body asDictionary];
+    else if([__body respondsToSelector:@selector(toDictionary)]) {
+        bodyDictionary = [(SWGObject*)__body toDictionary];
     }
     else if([__body isKindOfClass:[NSString class]]) {
         // convert it to a dictionary
@@ -110,18 +115,25 @@ static NSString * basePath = @"{{basePath}}";
     }
     {{/bodyParam}}
     {{^bodyParam}}
-    bodyDictionary = [[NSMutableArray alloc] init];
 
     NSMutableDictionary * formParams = [[NSMutableDictionary alloc]init]; 
 
-    {{#formParams}}{{#notFile}}
+    {{#formParams}}
+    {{#notFile}}
     formParams[@"{{paramName}}"] = {{paramName}};
     {{/notFile}}{{#isFile}}
     requestContentType = @"multipart/form-data";
+    if(bodyDictionary == nil) {
+      bodyDictionary = [[NSMutableArray alloc] init];
+    }
     [bodyDictionary addObject:{{paramName}}];
     {{paramName}}.paramName  = @"{{baseName}}";
-    {{/isFile}}{{/formParams}}
+    {{/isFile}}
+    if(bodyDictionary == nil) {
+      bodyDictionary = [[NSMutableArray alloc] init];
+    }
     [bodyDictionary addObject:formParams];
+    {{/formParams}}
     {{/bodyParam}}
 
     {{#requiredParamCount}}
@@ -134,11 +146,26 @@ static NSString * basePath = @"{{basePath}}";
 
     SWGApiClient* client = [SWGApiClient sharedClientFromPool:basePath];
 
-    {{#returnContainer}}{{>apiBodyResponseWithContainer}}{{/returnContainer}}
+    {{#returnContainer}}
+    // response is in a container
+    {{>apiBodyResponseWithContainer}}{{/returnContainer}}
+
     {{#returnSimpleType}}
-    {{#returnTypeIsPrimitive}}{{>apiPrimitiveResponse}}{{/returnTypeIsPrimitive}}
-    {{#returnBaseType}}{{>apiNonPrimitiveResponse}}{{/returnBaseType}}
+    // non container response
+
+    {{#returnTypeIsPrimitive}}
+    // primitive response
+    {{>apiPrimitiveResponse}}{{/returnTypeIsPrimitive}}
+
+    {{#returnBaseType}}
+    // complex response
+    {{>apiNonPrimitiveResponse}}{{/returnBaseType}}
     {{/returnSimpleType}}
+
+    {{^returnSimpleType}}{{^returnContainer}}
+    // it's void
+    {{>voidResponse}}
+    {{/returnContainer}}{{/returnSimpleType}}
 }
 
 {{/operation}}
