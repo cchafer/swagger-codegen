@@ -30,13 +30,17 @@ public class AkkaScalaClientCodegen extends DefaultCodegen implements CodegenCon
   protected String configKey = "apiRequest";
   protected int defaultTimeoutInMs = 5000;
   protected String configKeyPath = mainPackage;
-  protected String authScheme = "";
-  protected boolean authPreemptive = false;
-  protected boolean asyncHttpClient = !authScheme.isEmpty();
+
   protected boolean registerNonStandardStatusCodes = true;
   protected boolean renderJavadoc = true;
   protected boolean removeOAuthSecurities = true;
-
+  /**
+   * If set to true, only the default response (the one with le lowest 2XX code) will be considered as a success, and all
+   * others as ApiErrors.
+   * If set to false, all responses defined in the model will be considered as a success upon reception. Only http errors,
+   * unmarshalling problems and any other RuntimeException will be considered as ApiErrors.
+   */
+  protected boolean onlyOneSuccess = true;
 
   public CodegenType getTag() {
     return CodegenType.CLIENT;
@@ -47,7 +51,7 @@ public class AkkaScalaClientCodegen extends DefaultCodegen implements CodegenCon
   }
 
   public String getHelp() {
-    return "Generates a Scala client library.";
+    return "Generates a Scala client library base on Akka/Spray.";
   }
 
   public AkkaScalaClientCodegen() {
@@ -72,9 +76,6 @@ public class AkkaScalaClientCodegen extends DefaultCodegen implements CodegenCon
     additionalProperties.put("groupId", groupId);
     additionalProperties.put("artifactId", artifactId);
     additionalProperties.put("artifactVersion", artifactVersion);
-    additionalProperties.put("asyncHttpClient", asyncHttpClient);
-    additionalProperties.put("authScheme", authScheme);
-    additionalProperties.put("authPreemptive", authPreemptive);
     additionalProperties.put("configKey", configKey);
     additionalProperties.put("configKeyPath", configKeyPath);
     additionalProperties.put("defaultTimeout", defaultTimeoutInMs);
@@ -83,6 +84,7 @@ public class AkkaScalaClientCodegen extends DefaultCodegen implements CodegenCon
     additionalProperties.put("fnCapitalize", new CapitalizeLambda());
     additionalProperties.put("fnCamelize", new CamelizeLambda(false));
     additionalProperties.put("fnEnumEntry", new EnumEntryLambda());
+    additionalProperties.put("onlyOneSuccess", onlyOneSuccess);
 
     supportingFiles.add(new SupportingFile("pom.mustache", "", "pom.xml"));
     supportingFiles.add(new SupportingFile("reference.mustache", resourcesFolder, "reference.conf"));
@@ -288,7 +290,6 @@ public class AkkaScalaClientCodegen extends DefaultCodegen implements CodegenCon
       return "null";
     else if (p instanceof DateTimeProperty)
       return "null";
-
     else if (p instanceof DoubleProperty)
       return "null";
     else if (p instanceof FloatProperty)

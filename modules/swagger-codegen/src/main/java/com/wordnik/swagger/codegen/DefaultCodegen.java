@@ -708,8 +708,6 @@ public class DefaultCodegen {
 
     if (operation.getResponses() != null && !operation.getResponses().isEmpty()) {
       Response methodResponse = findMethodResponse(operation.getResponses());
-      CodegenResponse methodCodegenResponse = null;
-
 
       for (Map.Entry<String, Response> entry : operation.getResponses().entrySet()) {
         Response response = entry.getValue();
@@ -719,8 +717,7 @@ public class DefaultCodegen {
             !defaultIncludes.contains(r.baseType) &&
             !languageSpecificPrimitives.contains(r.baseType))
           imports.add(r.baseType);
-        if (response == methodResponse)
-          methodCodegenResponse = r;
+        r.isDefault = response == methodResponse;
         op.responses.add(r);
       }
       op.responses.get(op.responses.size() - 1).hasMore = false;

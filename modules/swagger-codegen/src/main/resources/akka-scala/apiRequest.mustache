@@ -1,5 +1,11 @@
 package {{invokerPackage}}
 
+sealed trait ResponseState
+object ResponseState {
+  case object Success extends ResponseState
+  case object Error extends ResponseState
+}
+
 case class ApiRequest[U](
                        // required fields
                        method: ApiMethod,
@@ -8,7 +14,7 @@ case class ApiRequest[U](
                        contentType: String,
 
                        // optional fields
-                       responses: Map[Int, Manifest[_]] = Map.empty,
+                       responses: Map[Int, (Manifest[_], ResponseState)] = Map.empty,
                        bodyParam: Option[Any] = None,
                        formParams: Map[String, Any] = Map.empty,
                        pathParams: Map[String, Any] = Map.empty,
@@ -20,11 +26,15 @@ case class ApiRequest[U](
 
   def withApiKey(key: ApiKeyValue, keyName: String, location: ApiKeyLocation) = withCredentials(ApiKeyCredentials(key, keyName, location))
 
-  def withResponse[T](code: Int)(implicit m: Manifest[T]) = copy[U](responses = responses + (code -> m))
+  def withSuccessResponse[T](code: Int)(implicit m: Manifest[T]) = copy[U](responses = responses + (code -> (m, ResponseState.Success)))
 
-  def withDefaultResponse[T](implicit m: Manifest[T]) = withResponse[T](0)
+  def withErrorResponse[T](code: Int)(implicit m: Manifest[T]) = copy[U](responses = responses + (code -> (m, ResponseState.Error)))
 
-  def responseForCode(statusCode: Int): Option[Manifest[_]] = responses.get(statusCode) orElse responses.get(0)
+  def withDefaultSuccessResponse[T](implicit m: Manifest[T]) = withSuccessResponse[T](0)
+
+  def withDefaultErrorResponse[T](implicit m: Manifest[T]) = withErrorResponse[T](0)
+
+  def responseForCode(statusCode: Int): Option[(Manifest[_], ResponseState)] = responses.get(statusCode) orElse responses.get(0)
 
   def withoutBody() = copy[U](bodyParam = None)
 

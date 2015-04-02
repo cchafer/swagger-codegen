@@ -15,7 +15,7 @@ sealed case class ApiResponse[T](code: Int, content: T, headers: Map[String, Str
   private def castedHeader[U](name: String, conversion: String => U): Option[U] = { Try { header(name).map( conversion ) }.get }
 }
 
-sealed case class ApiError(code: Int, message: String, responseContent: Option[String], cause: Throwable = null)
+sealed case class ApiError[T](code: Int, message: String, responseContent: Option[T], cause: Throwable = null, headers: Map[String, String] = Map.empty)
   extends Throwable(s"($code) $message.${responseContent.map(s => s" Content : $s").getOrElse("")}", cause)
 
 sealed case class ApiMethod(value: String)

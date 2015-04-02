@@ -235,10 +235,17 @@ class ApiInvoker(formats: Formats)(implicit system: ActorSystem) extends Untrust
 
   def unmarshallApiResponse[T](request: ApiRequest[T])(response: HttpResponse): ApiResponse[T] = {
     request.responseForCode(response.status.intValue) match {
-      case Some(manifest: Manifest[T]) =>
+      case Some( (manifest: Manifest[T], state: ResponseState) ) =>
         entityUnmarshaller(manifest)(response.entity) match {
           case Right(value) ⇒
-            ApiResponse(response.status.intValue, value, response.headers.map(header => (header.name, header.value)).toMap)
+            state match {
+              case ResponseState.Success =>
+                ApiResponse(response.status.intValue, value, response.headers.map(header => (header.name, header.value)).toMap)
+              case ResponseState.Error =>
+                throw new ApiError(response.status.intValue, "Error response received",
+                  Some(value),
+                  headers = response.headers.map(header => (header.name, header.value)).toMap)
+            }
 
           case Left(MalformedContent(error, Some(cause))) ⇒
             throw new ApiError(response.status.intValue, s"Unable to unmarshall content to [$manifest]", Some(response.entity.toString), cause)
