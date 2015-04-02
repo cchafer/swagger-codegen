@@ -19,7 +19,8 @@ module Swagger
       # Set default headers
       default_headers = {
         'Content-Type' => "application/#{attributes[:format].downcase}",
-        :api_key => Swagger.configuration.api_key
+        :api_key => Swagger.configuration.api_key,
+        'User-Agent' => Swagger.configuration.user_agent
       }
 
       # api_key from headers hash trumps the default, even if its value is blank
@@ -156,8 +157,9 @@ module Swagger
     end
   
     def make
-      logger = Logger.new STDOUT
-      logger.debug self.url
+      #TODO use configuration setting to determine if debugging
+      #logger = Logger.new STDOUT
+      #logger.debug self.url
       response = case self.http_method.to_sym
       when :get,:GET
         Typhoeus::Request.get(

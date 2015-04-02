@@ -25,18 +25,27 @@
 class Order implements ArrayAccess {
   static $swaggerTypes = array(
       'id' => 'int',
-      'petId' => 'int',
+      'pet_id' => 'int',
       'quantity' => 'int',
-      'shipDate' => 'DateTime',
+      'ship_date' => 'DateTime',
       'status' => 'string',
       'complete' => 'boolean'
-    );
+  );
+
+  static $attributeMap = array(
+      'id' => 'id',
+      'pet_id' => 'petId',
+      'quantity' => 'quantity',
+      'ship_date' => 'shipDate',
+      'status' => 'status',
+      'complete' => 'complete'
+  );
 
   
   public $id; /* int */
-  public $petId; /* int */
+  public $pet_id; /* int */
   public $quantity; /* int */
-  public $shipDate; /* DateTime */
+  public $ship_date; /* DateTime */
   /**
   * Order Status
   */
@@ -45,9 +54,9 @@ class Order implements ArrayAccess {
 
   public function __construct(array $data) {
     $this->id = $data["id"];
-    $this->petId = $data["petId"];
+    $this->pet_id = $data["pet_id"];
     $this->quantity = $data["quantity"];
-    $this->shipDate = $data["shipDate"];
+    $this->ship_date = $data["ship_date"];
     $this->status = $data["status"];
     $this->complete = $data["complete"];
   }
